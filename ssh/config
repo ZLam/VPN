@@ -1,0 +1,18 @@
+# 因为某些机场会屏蔽22端口 begin
+Host github.com
+Hostname ssh.github.com
+Port 443
+User git
+# 因为某些机场会屏蔽22端口 end
+
+# ZLam configuration
+Host github_ZLam.com
+HostName github.com
+User git
+IdentityFile ~/.ssh/id_ed25519
+
+# LULU configuration
+Host github_LULU.com
+HostName github.com
+User git
+IdentityFile ~/.ssh/LULU
