@@ -1,3 +1,4 @@
+name: 'my_stash_override'
 proxy-groups: #!replace
   - name: 🚀 节点选择
     type: select
