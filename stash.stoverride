@@ -1,12 +1,406 @@
-proxy-groups:
-  - name: 🎥 奈飞节点EX
+proxy-groups: #!replace
+  - name: 🚀 节点选择
     type: select
+    proxies:
+      - ♻️ 自动选择
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+  - name: 🚀 手动切换
+    type: select
+    proxies:
+      - 电信用户建议使用01或Premium节点
+      - 🇭🇰 香港01 家宽（推荐）
+      - 🇭🇰 香港01 家宽(需要IPv6)
+      - 🇭🇰 香港02 家宽
+      - 🇭🇰 香港03 家宽
+      - 🇭🇰 香港Premium01@2Gbps｜x2
+      - 部分游戏需要开启Tun模式才有效IEPL｜x8
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用(SS)
+      - 🇸🇬 新加坡01 (需要IPv6)
+      - 🇸🇬 新加坡01
+      - 🇸🇬 新加坡02
+      - 🇸🇬 新加坡03
+      - 🇸🇬 新加坡Premium01@2Gbps｜x2
+      - 🇨🇳 台湾01 (需要IPv6)
+      - 🇨🇳 台湾01
+      - 🇨🇳 台湾02
+      - 🇨🇳 台湾03
+      - 🇯🇵 日本01 (需要IPv6)
+      - 🇯🇵 日本01
+      - 🇯🇵 日本02
+      - 🇯🇵 日本03
+      - 🇯🇵 日本Premium01｜x2
+      - 🇺🇸 美国01 (需要IPv6)
+      - 🇺🇸 美国01
+      - 🇺🇸 美国02
+      - 🇺🇸 美国03
+      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
+      - 🇰🇷 韩国
+      - 🇦🇶 南极 可改B站IP
+      - 🇦🇷 阿根廷
+      - 🇪🇬 埃及
+      - 🇹🇷 土耳其
+      - 🇺🇦 乌克兰
+      - 🇫🇷 法国
+      - 🇩🇪 德国
+      - 🇲🇾 马来西亚
+      - 🇳🇱 荷兰
+      - 🇳🇬 尼日利亚
+      - 🇹🇭 泰国
+      - 🇷🇺 俄罗斯
+      - 🇮🇩 印度尼西亚
+      - 🇻🇳 越南
+      - 🇮🇳 印度
+      - 🇵🇭 菲律宾｜x2
+      - 🇲🇴 澳门
+      - 🇦🇺 澳大利亚
+      - 🇬🇧 英国
+      - 🇧🇷 巴西
+      - 🇦🇪 迪拜
+  - name: ♻️ 自动选择
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 电信用户建议使用01或Premium节点
+      - 🇭🇰 香港01 家宽（推荐）
+      - 🇭🇰 香港01 家宽(需要IPv6)
+      - 🇭🇰 香港02 家宽
+      - 🇭🇰 香港03 家宽
+      - 🇭🇰 香港Premium01@2Gbps｜x2
+      - 部分游戏需要开启Tun模式才有效IEPL｜x8
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用(SS)
+      - 🇸🇬 新加坡01 (需要IPv6)
+      - 🇸🇬 新加坡01
+      - 🇸🇬 新加坡02
+      - 🇸🇬 新加坡03
+      - 🇸🇬 新加坡Premium01@2Gbps｜x2
+      - 🇨🇳 台湾01 (需要IPv6)
+      - 🇨🇳 台湾01
+      - 🇨🇳 台湾02
+      - 🇨🇳 台湾03
+      - 🇯🇵 日本01 (需要IPv6)
+      - 🇯🇵 日本01
+      - 🇯🇵 日本02
+      - 🇯🇵 日本03
+      - 🇯🇵 日本Premium01｜x2
+      - 🇺🇸 美国01 (需要IPv6)
+      - 🇺🇸 美国01
+      - 🇺🇸 美国02
+      - 🇺🇸 美国03
+      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
+      - 🇰🇷 韩国
+      - 🇦🇶 南极 可改B站IP
+      - 🇦🇷 阿根廷
+      - 🇪🇬 埃及
+      - 🇹🇷 土耳其
+      - 🇺🇦 乌克兰
+      - 🇫🇷 法国
+      - 🇩🇪 德国
+      - 🇲🇾 马来西亚
+      - 🇳🇱 荷兰
+      - 🇳🇬 尼日利亚
+      - 🇹🇭 泰国
+      - 🇷🇺 俄罗斯
+      - 🇮🇩 印度尼西亚
+      - 🇻🇳 越南
+      - 🇮🇳 印度
+      - 🇵🇭 菲律宾｜x2
+      - 🇲🇴 澳门
+      - 🇦🇺 澳大利亚
+      - 🇬🇧 英国
+      - 🇧🇷 巴西
+      - 🇦🇪 迪拜
+  - name: 📲 电报消息
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🇸🇬 狮城节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+  - name: 💬 Ai平台
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🇸🇬 狮城节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+      - 🇺🇸 美国01 (需要IPv6)
+      - 🇺🇸 美国01
+      - 🇺🇸 美国02
+      - 🇺🇸 美国03
+      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
+  - name: 📹 油管视频
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🇸🇬 狮城节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+  - name: 🎥 奈飞视频
+    type: select
+    proxies:
+      - 🎥 奈飞节点
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🇸🇬 狮城节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+  - name: 📺 巴哈姆特
+    type: select
+    proxies:
+      - 🇨🇳 台湾节点
+      - 🚀 节点选择
+      - 🚀 手动切换
+      - DIRECT
+      - 📺 巴哈姆特节点
+  - name: 📺 哔哩哔哩
+    type: select
+    proxies:
+      - 🎯 全球直连
+      - 🇨🇳 台湾节点
+      - 🇭🇰 香港节点
+  - name: 🌍 国外媒体
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+      - DIRECT
+  - name: 🌏 国内媒体
+    type: select
+    proxies:
+      - DIRECT
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🚀 手动切换
+  - name: 📢 谷歌FCM
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: Ⓜ️ 微软Bing
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: Ⓜ️ 微软云盘
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: Ⓜ️ 微软服务
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: 🍎 苹果服务
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: 🎮 游戏平台
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - 🇺🇲 美国节点
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: 🎶 网易音乐
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - ♻️ 自动选择
+  - name: 🎯 全球直连
+    type: select
+    proxies:
+      - DIRECT
+      - 🚀 节点选择
+      - ♻️ 自动选择
+  - name: 🛑 广告拦截
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+  - name: 🍃 应用净化
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+  - name: 🐟 漏网之鱼
+    type: select
+    proxies:
+      - 🚀 节点选择
+      - ♻️ 自动选择
+      - DIRECT
+      - 🇭🇰 香港节点
+      - 🇨🇳 台湾节点
+      - 🇸🇬 狮城节点
+      - 🇯🇵 日本节点
+      - 🇺🇲 美国节点
+      - 🇰🇷 韩国节点
+      - 🚀 手动切换
+  - name: 🇭🇰 香港节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 🇭🇰 香港01 家宽（推荐）
+      - 🇭🇰 香港01 家宽(需要IPv6)
+      - 🇭🇰 香港02 家宽
+      - 🇭🇰 香港03 家宽
+      - 🇭🇰 香港Premium01@2Gbps｜x2
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用
+      - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用(SS)
+  - name: 🇯🇵 日本节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 🇯🇵 日本01 (需要IPv6)
+      - 🇯🇵 日本01
+      - 🇯🇵 日本02
+      - 🇯🇵 日本03
+      - 🇯🇵 日本Premium01｜x2
+  - name: 🇺🇲 美国节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 150
+    proxies:
+      - 🇺🇸 美国01 (需要IPv6)
+      - 🇺🇸 美国01
+      - 🇺🇸 美国02
+      - 🇺🇸 美国03
+      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
+  - name: 🇨🇳 台湾节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 🇨🇳 台湾01 (需要IPv6)
+      - 🇨🇳 台湾01
+      - 🇨🇳 台湾02
+      - 🇨🇳 台湾03
+  - name: 🇸🇬 狮城节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
     proxies:
       - 🇸🇬 新加坡01 (需要IPv6)
       - 🇸🇬 新加坡01
       - 🇸🇬 新加坡02
       - 🇸🇬 新加坡03
       - 🇸🇬 新加坡Premium01@2Gbps｜x2
+  - name: 🇰🇷 韩国节点
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    proxies:
+      - 🇰🇷 韩国
+  - name: 🎥 奈飞节点
+    type: select
+    proxies:
+      - DIRECT
+      - 🇸🇬 新加坡01 (需要IPv6)
+      - 🇸🇬 新加坡01
+      - 🇸🇬 新加坡02
+      - 🇸🇬 新加坡03
+      - 🇸🇬 新加坡Premium01@2Gbps｜x2
+      - 🇨🇳 台湾01 (需要IPv6)
+      - 🇨🇳 台湾01
+      - 🇨🇳 台湾02
+      - 🇨🇳 台湾03
+  - name: 📺 巴哈姆特节点
+    type: select
+    proxies:
+      - DIRECT
       - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
