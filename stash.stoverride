@@ -1,5 +1,5 @@
 proxy-groups:
-  - name: 🎥 奈飞节点
+  - name: 🎥 奈飞节点EX
     type: select
     proxies:
       - 🇸🇬 新加坡01 (需要IPv6)
