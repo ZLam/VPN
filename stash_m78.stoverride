@@ -1,4 +1,4 @@
-name: 'my_stash_override'
+name: 'm78_stash_override'
 proxy-groups: #!replace
   - name: 🚀 节点选择
     type: select
@@ -17,32 +17,26 @@ proxy-groups: #!replace
     proxies:
       - 电信用户建议使用01或Premium节点
       - 🇭🇰 香港01 家宽（推荐）
-      - 🇭🇰 香港01 家宽(需要IPv6)
       - 🇭🇰 香港02 家宽
       - 🇭🇰 香港03 家宽
       - 🇭🇰 香港Premium01@2Gbps｜x2
       - 部分游戏需要开启Tun模式才有效IEPL｜x8
       - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用
       - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用(SS)
-      - 🇸🇬 新加坡01 (需要IPv6)
       - 🇸🇬 新加坡01
       - 🇸🇬 新加坡02
       - 🇸🇬 新加坡03
       - 🇸🇬 新加坡Premium01@2Gbps｜x2
-      - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
       - 🇨🇳 台湾03
-      - 🇯🇵 日本01 (需要IPv6)
       - 🇯🇵 日本01
       - 🇯🇵 日本02
       - 🇯🇵 日本03
       - 🇯🇵 日本Premium01｜x2
-      - 🇺🇸 美国01 (需要IPv6)
       - 🇺🇸 美国01
       - 🇺🇸 美国02
       - 🇺🇸 美国03
-      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
       - 🇰🇷 韩国
       - 🇦🇶 南极 可改B站IP
       - 🇦🇷 阿根廷
@@ -73,32 +67,26 @@ proxy-groups: #!replace
     proxies:
       - 电信用户建议使用01或Premium节点
       - 🇭🇰 香港01 家宽（推荐）
-      - 🇭🇰 香港01 家宽(需要IPv6)
       - 🇭🇰 香港02 家宽
       - 🇭🇰 香港03 家宽
       - 🇭🇰 香港Premium01@2Gbps｜x2
       - 部分游戏需要开启Tun模式才有效IEPL｜x8
       - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用
       - 🇭🇰 广港IEPL专线@500Mbps｜x8｜游戏专用(SS)
-      - 🇸🇬 新加坡01 (需要IPv6)
       - 🇸🇬 新加坡01
       - 🇸🇬 新加坡02
       - 🇸🇬 新加坡03
       - 🇸🇬 新加坡Premium01@2Gbps｜x2
-      - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
       - 🇨🇳 台湾03
-      - 🇯🇵 日本01 (需要IPv6)
       - 🇯🇵 日本01
       - 🇯🇵 日本02
       - 🇯🇵 日本03
       - 🇯🇵 日本Premium01｜x2
-      - 🇺🇸 美国01 (需要IPv6)
       - 🇺🇸 美国01
       - 🇺🇸 美国02
       - 🇺🇸 美国03
-      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
       - 🇰🇷 韩国
       - 🇦🇶 南极 可改B站IP
       - 🇦🇷 阿根廷
@@ -147,11 +135,9 @@ proxy-groups: #!replace
       - 🇰🇷 韩国节点
       - 🚀 手动切换
       - DIRECT
-      - 🇺🇸 美国01 (需要IPv6)
       - 🇺🇸 美国01
       - 🇺🇸 美国02
       - 🇺🇸 美国03
-      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
   - name: 📹 油管视频
     type: select
     proxies:
@@ -329,7 +315,6 @@ proxy-groups: #!replace
     tolerance: 50
     proxies:
       - 🇭🇰 香港01 家宽（推荐）
-      - 🇭🇰 香港01 家宽(需要IPv6)
       - 🇭🇰 香港02 家宽
       - 🇭🇰 香港03 家宽
       - 🇭🇰 香港Premium01@2Gbps｜x2
@@ -341,7 +326,6 @@ proxy-groups: #!replace
     interval: 300
     tolerance: 50
     proxies:
-      - 🇯🇵 日本01 (需要IPv6)
       - 🇯🇵 日本01
       - 🇯🇵 日本02
       - 🇯🇵 日本03
@@ -352,18 +336,15 @@ proxy-groups: #!replace
     interval: 300
     tolerance: 150
     proxies:
-      - 🇺🇸 美国01 (需要IPv6)
       - 🇺🇸 美国01
       - 🇺🇸 美国02
       - 🇺🇸 美国03
-      - 🇺🇸 美国直连01(需要IPv6)|x0.3|测试
   - name: 🇨🇳 台湾节点
     type: url-test
     url: http://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
     proxies:
-      - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
       - 🇨🇳 台湾03
@@ -373,7 +354,6 @@ proxy-groups: #!replace
     interval: 300
     tolerance: 50
     proxies:
-      - 🇸🇬 新加坡01 (需要IPv6)
       - 🇸🇬 新加坡01
       - 🇸🇬 新加坡02
       - 🇸🇬 新加坡03
@@ -389,12 +369,10 @@ proxy-groups: #!replace
     type: select
     proxies:
       - DIRECT
-      - 🇸🇬 新加坡01 (需要IPv6)
       - 🇸🇬 新加坡01
       - 🇸🇬 新加坡02
       - 🇸🇬 新加坡03
       - 🇸🇬 新加坡Premium01@2Gbps｜x2
-      - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
       - 🇨🇳 台湾03
@@ -402,7 +380,6 @@ proxy-groups: #!replace
     type: select
     proxies:
       - DIRECT
-      - 🇨🇳 台湾01 (需要IPv6)
       - 🇨🇳 台湾01
       - 🇨🇳 台湾02
       - 🇨🇳 台湾03
