@@ -7,8 +7,6 @@
 # 以 ';' 或 '#' 或 '//' 开头的配置文件行为注释行
 
 # [通用设置]
-http_port: 6152
-socks_port: 6153
 ipv6: false
 vif_only: true
 
@@ -20,7 +18,7 @@ asn_db_url: https://raw.githubusercontent.com/Loyalsoldier/geoip/release/GeoLite
 proxy_latency_test_url: http://1.1.1.1/generate_204
 direct_latency_test_url: http://wifi.vivo.com.cn/generate_204
 
-# [DNS设置]
+# [DNS设置] 高级版
 hijack_dns:   # 劫持并接管指定目标的传统 DNS 请求
 - '*:53'
 dns:
@@ -79,6 +77,8 @@ real_ip_domains:      # 这些域名在 DNS 查询时返回真实 IP，不使用
 - '*.prod.cloud.netflix.com'
 - appboot.netflix.com
 - '*-appboot.netflix.com'
+# [DNS设置] 简化版
+# dns: {}
 
 # [策略组]
 policy_groups:
@@ -269,17 +269,6 @@ rules:
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Telegram.yaml
     policy: Telegram
-- and:
-    name: Fuck Telegram
-    match:
-    - not:
-        match:
-          rule_set:
-            match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Telegram.yaml
-    - listen_port:
-        match: '6153'
-    policy: REJECT
-    disabled: false
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Twitter.yaml
     policy: Social
