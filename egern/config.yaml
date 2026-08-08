@@ -119,6 +119,7 @@ policy_groups:
     name: Microsoft
     policies:
     - Manual
+    - DIRECT
     - HongKong
     - United States
     - Singapore
