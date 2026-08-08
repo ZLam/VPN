@@ -287,10 +287,13 @@ rules:
     policy: Google
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Github.yaml
+    policy: Global
+- rule_set:
+    match: https://raw.githubusercontent.com/Centralmatrix3/Matrix-io/master/Egern/Ruleset/Microsoft.yaml
     policy: Microsoft
 - rule_set:
-    match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Microsoft.yaml
-    policy: Microsoft
+    match: https://raw.githubusercontent.com/Centralmatrix3/Matrix-io/master/Egern/Ruleset/Apple.yaml
+    policy: Apple
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Emby.yaml
     policy: Emby
@@ -315,9 +318,6 @@ rules:
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Proxy.yaml
     policy: Global
-- rule_set:
-    match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/AppleServers.yaml
-    policy: Apple
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Lan.yaml
     policy: DIRECT
