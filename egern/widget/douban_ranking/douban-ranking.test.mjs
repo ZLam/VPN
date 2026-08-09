@@ -6,6 +6,13 @@ const source = await readFile(new URL('./douban-ranking.js', import.meta.url), '
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { default: renderWidget } = await import(moduleUrl);
 
+function urlsIn(node) {
+  if (!node || typeof node !== 'object') return [];
+  const urls = typeof node.url === 'string' ? [node.url] : [];
+  if (!Array.isArray(node.children)) return urls;
+  return urls.concat(node.children.flatMap(urlsIn));
+}
+
 function payload(name = '国外口碑综艺榜') {
   return {
     total: 3,
@@ -127,6 +134,26 @@ test('renders all supported widget families', async () => {
     assert.equal(widget.type, 'widget');
     assert.match(widget.refreshAfter, /^\d{4}-\d{2}-\d{2}T/);
     assert.ok(Array.isArray(widget.children));
+  }
+});
+
+test('uses exactly one ranking URL for every widget family', async () => {
+  const families = [
+    'systemSmall',
+    'systemMedium',
+    'systemLarge',
+    'systemExtraLarge',
+    'accessoryCircular',
+    'accessoryRectangular',
+    'accessoryInline',
+  ];
+
+  for (const family of families) {
+    const { ctx } = createContext({ family });
+    const widget = await renderWidget(ctx);
+    assert.deepEqual(urlsIn(widget), [
+      'https://m.douban.com/subject_collection/show_global_best_weekly',
+    ]);
   }
 });
 

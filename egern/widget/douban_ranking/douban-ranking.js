@@ -256,7 +256,7 @@ function spacer(length) {
   return length === undefined ? { type: 'spacer' } : { type: 'spacer', length };
 }
 
-function posterNode(dataUri, collection, width, height, url) {
+function posterNode(dataUri, collection, width, height) {
   if (!dataUri) {
     return {
       type: 'image',
@@ -266,7 +266,6 @@ function posterNode(dataUri, collection, width, height, url) {
       height,
       resizeMode: 'contain',
       borderRadius: 9,
-      url,
     };
   }
 
@@ -277,7 +276,6 @@ function posterNode(dataUri, collection, width, height, url) {
     height,
     resizeMode: 'cover',
     borderRadius: 9,
-    url,
   };
 }
 
@@ -310,7 +308,6 @@ function header(ranking, collection, cacheState, compact = false) {
       gap: 5,
       height: compact ? 15 : 18,
       alignItems: 'center',
-      url: ranking.listUrl,
     },
   );
 }
@@ -349,7 +346,6 @@ function rankRow(item, accent, options = {}) {
       padding: options.padding || [2, 0],
       backgroundColor: options.backgroundColor,
       borderRadius: options.borderRadius,
-      url: item.link || item.webUrl,
     },
   );
 }
@@ -385,14 +381,12 @@ function smallRankRow(item, accent) {
       gap: 3,
       height: 15,
       alignItems: 'center',
-      url: item.link || item.webUrl,
     },
   );
 }
 
 function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const [first, second, third] = ranking.items;
-  const heroLink = first.link || first.webUrl;
 
   return {
     type: 'widget',
@@ -406,7 +400,7 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
       stack(
         'row',
         [
-          posterNode(poster, collection, 40, 58, heroLink),
+          posterNode(poster, collection, 40, 58),
           stack(
             'column',
             [
@@ -435,10 +429,10 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
                 { gap: 3, alignItems: 'center' },
               ),
             ],
-            { gap: 2, height: 58, alignItems: 'start', flex: 1, url: heroLink },
+            { gap: 2, height: 58, alignItems: 'start', flex: 1 },
           ),
         ],
-        { gap: 7, height: 58, alignItems: 'start', url: heroLink },
+        { gap: 7, height: 58, alignItems: 'start' },
       ),
       stack(
         'column',
@@ -454,7 +448,6 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
 
 function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const first = ranking.items[0];
-  const heroLink = first.link || first.webUrl;
 
   return {
     type: 'widget',
@@ -471,7 +464,7 @@ function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
           stack(
             'column',
             [
-              posterNode(poster, collection, 62, 88, heroLink),
+              posterNode(poster, collection, 62, 88),
               text(`★ ${scoreText(first)}`, {
                 font: { size: 11, weight: 'bold' },
                 textColor: COLORS.score,
@@ -479,7 +472,7 @@ function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
                 maxLines: 1,
               }),
             ],
-            { gap: 3, alignItems: 'center', url: heroLink },
+            { gap: 3, alignItems: 'center' },
           ),
           stack(
             'column',
@@ -502,7 +495,6 @@ function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
 
 function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const first = ranking.items[0];
-  const heroLink = first.link || first.webUrl;
   const count = abbreviatedCount(first.ratingCount);
 
   return {
@@ -517,7 +509,7 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
       stack(
         'row',
         [
-          posterNode(poster, collection, 64, 91, heroLink),
+          posterNode(poster, collection, 64, 91),
           stack(
             'column',
             [
@@ -557,7 +549,7 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
                   })
                 : spacer(0),
             ],
-            { gap: 3, alignItems: 'start', flex: 1, url: heroLink },
+            { gap: 3, alignItems: 'start', flex: 1 },
           ),
         ],
         {
@@ -566,7 +558,6 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
           padding: 9,
           backgroundColor: COLORS.card,
           borderRadius: 11,
-          url: heroLink,
         },
       ),
       stack(
@@ -606,7 +597,7 @@ function accessoryCircularWidget(ranking, collection, refreshAfter) {
     padding: 2,
     gap: 0,
     refreshAfter,
-    url: first.link || ranking.listUrl,
+    url: ranking.listUrl,
     children: [
       text(collection.id.startsWith('show_') ? '综' : '剧', {
         font: { size: 10, weight: 'bold' },
@@ -630,7 +621,7 @@ function accessoryInlineWidget(ranking, collection, refreshAfter) {
   return {
     type: 'widget',
     refreshAfter,
-    url: first.link || ranking.listUrl,
+    url: ranking.listUrl,
     children: [
       text(`${collection.shortName} · 1 ${first.title} ${scoreText(first)}`, {
         font: { size: 12, weight: 'medium' },

@@ -41,7 +41,7 @@ https://m.douban.com/rexxar/api/v2/subject_collection/{COLLECTION_ID}/items?play
 - 锁屏圆形：榜首评分。
 - 锁屏行内：榜首标题与评分。
 
-点击榜单条目会使用豆瓣提供的跳转链接，点击标题或空白区域会打开完整榜单。
+每个 Widget 只设置一个整卡点击链接；点击任意位置都会打开当前 Widget 对应的豆瓣榜单页面，不再为标题、海报或单个榜单条目设置独立链接。
 
 ## 配置
 
