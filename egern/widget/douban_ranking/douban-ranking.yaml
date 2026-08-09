@@ -1,0 +1,25 @@
+name: 豆瓣口碑榜 Widget
+description: 展示豆瓣国外口碑综艺榜与全球口碑剧集榜，支持桌面、锁屏、24 小时缓存和失败降级。
+author: ZLam
+homepage: https://github.com/ZLam/VPN
+icon: chart.bar.xaxis
+
+scriptings:
+- generic:
+    name: douban-ranking
+    script_url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/douban_ranking/douban-ranking.js
+    timeout: 20
+
+widgets:
+- name: 豆瓣国外综艺榜
+  script_name: douban-ranking
+  env:
+    COLLECTION_ID: show_global_best_weekly
+    REFRESH_HOURS: '24'
+    REQUEST_TIMEOUT_SECONDS: '10'
+- name: 豆瓣全球剧集榜
+  script_name: douban-ranking
+  env:
+    COLLECTION_ID: tv_global_best_weekly
+    REFRESH_HOURS: '24'
+    REQUEST_TIMEOUT_SECONDS: '10'
