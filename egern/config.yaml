@@ -330,8 +330,10 @@ rules:
 
 # [MITM]
 mitm:
-  enabled: false
-# modules:
+  enabled: true
+modules:
+- url: https://raw.githubusercontent.com/Maasea/sgmodule/master/YouTube.Enhance.sgmodule
+  enabled: true
 # - url: https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/广告平台拦截器.beta.sgmodule
 #   enabled: true
 # - url: https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/拦截HTTPDNS.beta.sgmodule
@@ -361,8 +363,6 @@ mitm:
 # - url: https://raw.githubusercontent.com/fmz200/wool_scripts/refs/heads/main/Surge/module/XWebAds.module
 #   enabled: true
 # - url: https://raw.githubusercontent.com/Keywos/rule/main/script/wy/wy.sgmodule
-#   enabled: true
-# - url: https://raw.githubusercontent.com/Maasea/sgmodule/master/YouTube.Enhance.sgmodule
 #   enabled: true
 # - url: https://raw.githubusercontent.com/ConnersHua/RuleGo/master/Surge/Module/Block/Advertising.sgmodule
 #   enabled: true
