@@ -298,15 +298,20 @@ function header(ranking, collection, cacheState, compact = false) {
         textColor: COLORS.primary,
         maxLines: 1,
         minScale: 0.72,
-        flex: 1,
       }),
+      spacer(),
       text(rightLabel, {
         font: { size: compact ? 9 : 10, weight: 'medium' },
         textColor: cacheState === 'stale' ? COLORS.down : COLORS.tertiary,
         maxLines: 1,
       }),
     ],
-    { gap: 5, alignItems: 'center', url: ranking.listUrl },
+    {
+      gap: 5,
+      height: compact ? 15 : 18,
+      alignItems: 'center',
+      url: ranking.listUrl,
+    },
   );
 }
 
@@ -349,6 +354,42 @@ function rankRow(item, accent, options = {}) {
   );
 }
 
+function smallRankRow(item, accent) {
+  return stack(
+    'row',
+    [
+      text(item.rank, {
+        font: { size: 10, weight: 'bold' },
+        textColor: accent,
+        maxLines: 1,
+      }),
+      text(item.title, {
+        font: { size: 10, weight: 'semibold' },
+        textColor: COLORS.primary,
+        maxLines: 1,
+        minScale: 0.65,
+      }),
+      spacer(),
+      text(scoreText(item), {
+        font: { size: 10, weight: 'semibold' },
+        textColor: COLORS.score,
+        maxLines: 1,
+      }),
+      text(trendText(item), {
+        font: { size: 9, weight: 'medium' },
+        textColor: trendColor(item),
+        maxLines: 1,
+      }),
+    ],
+    {
+      gap: 3,
+      height: 15,
+      alignItems: 'center',
+      url: item.link || item.webUrl,
+    },
+  );
+}
+
 function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const [first, second, third] = ranking.items;
   const heroLink = first.link || first.webUrl;
@@ -357,7 +398,7 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
     type: 'widget',
     backgroundColor: COLORS.background,
     padding: 12,
-    gap: 5,
+    gap: 4,
     refreshAfter,
     url: ranking.listUrl,
     children: [
@@ -365,35 +406,48 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
       stack(
         'row',
         [
-          posterNode(poster, collection, 42, 60, heroLink),
+          posterNode(poster, collection, 40, 58, heroLink),
           stack(
             'column',
             [
-              text('#1', {
-                font: { size: 10, weight: 'bold' },
-                textColor: collection.accent,
-                maxLines: 1,
-              }),
-              text(first.title, {
-                font: { size: 13, weight: 'bold' },
+              text(`#1  ${first.title}`, {
+                font: { size: 12, weight: 'bold' },
                 textColor: COLORS.primary,
                 maxLines: 2,
-                minScale: 0.72,
+                minScale: 0.68,
               }),
               spacer(),
-              text(`★ ${scoreText(first)}`, {
-                font: { size: 11, weight: 'semibold' },
-                textColor: COLORS.score,
-                maxLines: 1,
-              }),
+              stack(
+                'row',
+                [
+                  text(`★ ${scoreText(first)}`, {
+                    font: { size: 11, weight: 'semibold' },
+                    textColor: COLORS.score,
+                    maxLines: 1,
+                  }),
+                  spacer(),
+                  text(trendText(first), {
+                    font: { size: 9, weight: 'medium' },
+                    textColor: trendColor(first),
+                    maxLines: 1,
+                  }),
+                ],
+                { gap: 3, alignItems: 'center' },
+              ),
             ],
-            { gap: 2, alignItems: 'start', flex: 1, url: heroLink },
+            { gap: 2, height: 58, alignItems: 'start', flex: 1, url: heroLink },
           ),
         ],
-        { gap: 7, alignItems: 'start', url: heroLink },
+        { gap: 7, height: 58, alignItems: 'start', url: heroLink },
       ),
-      second ? rankRow(second, collection.accent, { fontSize: 10, padding: [1, 0] }) : spacer(),
-      third ? rankRow(third, collection.accent, { fontSize: 10, padding: [1, 0] }) : spacer(),
+      stack(
+        'column',
+        [
+          second ? smallRankRow(second, collection.accent) : spacer(0),
+          third ? smallRankRow(third, collection.accent) : spacer(0),
+        ],
+        { gap: 3, height: 33, alignItems: 'start' },
+      ),
     ],
   };
 }

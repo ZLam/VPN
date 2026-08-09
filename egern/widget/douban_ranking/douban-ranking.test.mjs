@@ -130,6 +130,21 @@ test('renders all supported widget families', async () => {
   }
 });
 
+test('keeps small ranking rows in a fixed compact list', async () => {
+  const { ctx } = createContext({ family: 'systemSmall' });
+  const widget = await renderWidget(ctx);
+  const compactList = widget.children.at(-1);
+
+  assert.equal(compactList.type, 'stack');
+  assert.equal(compactList.direction, 'column');
+  assert.equal(compactList.height, 33);
+  assert.equal(compactList.children.length, 2);
+  assert.deepEqual(
+    compactList.children.map((row) => row.height),
+    [15, 15],
+  );
+});
+
 test('uses the requested collection id and caches data plus the hero poster', async () => {
   const { ctx, calls, store } = createContext({
     collectionId: 'tv_global_best_weekly',
