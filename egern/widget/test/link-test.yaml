@@ -1,0 +1,14 @@
+name: Widget 跳转测试
+description: 最小化测试 Egern Widget 的 HTTPS 链接跳转。
+author: ZLam
+icon: link
+
+scriptings:
+- generic:
+    name: widget-link-test
+    script_url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/test/link-test.js
+    timeout: 10
+
+widgets:
+- name: Widget 跳转测试
+  script_name: widget-link-test
