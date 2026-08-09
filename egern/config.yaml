@@ -20,66 +20,66 @@ proxy_latency_test_url: http://1.1.1.1/generate_204
 direct_latency_test_url: http://wifi.vivo.com.cn/generate_204
 
 # [DNS设置] 高级版
-hijack_dns:   # 劫持并接管指定目标的传统 DNS 请求
-- '*:53'
-dns:
-  bootstrap:
-  - system
-  upstreams:
-    Domestic-DNS:
-    - 223.5.5.5
-    - 119.29.29.29
-    Domestic-Encrypted-DNS:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-    Foreign-Encrypted-DNS:
-    - https://cloudflare-dns.com/dns-query
-    - https://dns.google/dns-query
-  forward:
-  - proxy_rule_set:
-      match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Reject.yaml
-      value: REJECT
-      disabled: false
-  - proxy_rule_set:
-      match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/ChinaDomain.yaml
-      value: Domestic-DNS
-      disabled: false
-  - domain_wildcard:
-      match: '*'
-      value: Domestic-Encrypted-DNS
-      disabled: false
-  hosts:
-    dns.google:
-    - 8.8.8.8, 8.8.4.4, 2001:4860:4860::8888, 2001:4860:4860::8844
-    cloudflare-dns.com:
-    - 104.16.249.249, 104.16.248.249, 2606:4700::6810:f8f9, 2606:4700::6810:f9f9
-    dns.alidns.com:
-    - 223.5.5.5, 223.6.6.6, 2400:3200:baba::1, 2400:3200::1
-    doh.pub:
-    - 1.12.12.12, 120.53.53.53
-    dot.pub:
-    - 1.12.12.12, 120.53.53.53
-  proxy_nameservers:
-  - 119.29.29.29
-  - 223.5.5.5
-real_ip_domains:      # 这些域名在 DNS 查询时返回真实 IP，不使用 Egern 的 Fake IP。
-- lancache.steamcontent.com
-- '*.msftconnecttest.com'
-- '*.msftncsi.com'
-- '*.srv.nintendo.net'
-- '*.stun.playstation.net'
-- xbox.*.microsoft.com
-- '*.xboxlive.com'
-- '*.logon.battlenet.com.cn'
-- '*.logon.battle.net'
-- stun.l.google.com
-- easy-login.10099.com.cn
-- '*-update.xoyocdn.com'
-- '*.prod.cloud.netflix.com'
-- appboot.netflix.com
-- '*-appboot.netflix.com'
+# hijack_dns:   # 劫持并接管指定目标的传统 DNS 请求
+# - '*:53'
+# dns:
+#   bootstrap:
+#   - system
+#   upstreams:
+#     Domestic-DNS:
+#     - 223.5.5.5
+#     - 119.29.29.29
+#     Domestic-Encrypted-DNS:
+#     - https://dns.alidns.com/dns-query
+#     - https://doh.pub/dns-query
+#     Foreign-Encrypted-DNS:
+#     - https://cloudflare-dns.com/dns-query
+#     - https://dns.google/dns-query
+#   forward:
+#   - proxy_rule_set:
+#       match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Reject.yaml
+#       value: REJECT
+#       disabled: false
+#   - proxy_rule_set:
+#       match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/ChinaDomain.yaml
+#       value: Domestic-DNS
+#       disabled: false
+#   - domain_wildcard:
+#       match: '*'
+#       value: Domestic-Encrypted-DNS
+#       disabled: false
+#   hosts:
+#     dns.google:
+#     - 8.8.8.8, 8.8.4.4, 2001:4860:4860::8888, 2001:4860:4860::8844
+#     cloudflare-dns.com:
+#     - 104.16.249.249, 104.16.248.249, 2606:4700::6810:f8f9, 2606:4700::6810:f9f9
+#     dns.alidns.com:
+#     - 223.5.5.5, 223.6.6.6, 2400:3200:baba::1, 2400:3200::1
+#     doh.pub:
+#     - 1.12.12.12, 120.53.53.53
+#     dot.pub:
+#     - 1.12.12.12, 120.53.53.53
+#   proxy_nameservers:
+#   - 119.29.29.29
+#   - 223.5.5.5
+# real_ip_domains:      # 这些域名在 DNS 查询时返回真实 IP，不使用 Egern 的 Fake IP。
+# - lancache.steamcontent.com
+# - '*.msftconnecttest.com'
+# - '*.msftncsi.com'
+# - '*.srv.nintendo.net'
+# - '*.stun.playstation.net'
+# - xbox.*.microsoft.com
+# - '*.xboxlive.com'
+# - '*.logon.battlenet.com.cn'
+# - '*.logon.battle.net'
+# - stun.l.google.com
+# - easy-login.10099.com.cn
+# - '*-update.xoyocdn.com'
+# - '*.prod.cloud.netflix.com'
+# - appboot.netflix.com
+# - '*-appboot.netflix.com'
 # [DNS设置] 简化版
-# dns: {}
+dns: {}
 
 # [策略组]
 policy_groups:
