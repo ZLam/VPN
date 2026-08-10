@@ -404,12 +404,24 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
           stack(
             'column',
             [
-              text(`#1  ${first.title}`, {
-                font: { size: 12, weight: 'bold' },
-                textColor: COLORS.primary,
-                maxLines: 2,
-                minScale: 0.68,
-              }),
+              stack(
+                'row',
+                [
+                  text(first.rank, {
+                    font: { size: 12, weight: 'bold' },
+                    textColor: collection.accent,
+                    textAlign: 'center',
+                  }),
+                  text(first.title, {
+                    font: { size: 12, weight: 'bold' },
+                    textColor: COLORS.primary,
+                    maxLines: 2,
+                    minScale: 0.68,
+                    flex: 1,
+                  }),
+                ],
+                { gap: 4, alignItems: 'start' },
+              ),
               spacer(),
               stack(
                 'row',
@@ -513,12 +525,24 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
           stack(
             'column',
             [
-              text(`#1  ${first.title}`, {
-                font: { size: 16, weight: 'bold' },
-                textColor: COLORS.primary,
-                maxLines: 2,
-                minScale: 0.75,
-              }),
+              stack(
+                'row',
+                [
+                  text(first.rank, {
+                    font: { size: 16, weight: 'bold' },
+                    textColor: collection.accent,
+                    textAlign: 'center',
+                  }),
+                  text(first.title, {
+                    font: { size: 16, weight: 'bold' },
+                    textColor: COLORS.primary,
+                    maxLines: 2,
+                    minScale: 0.75,
+                    flex: 1,
+                  }),
+                ],
+                { gap: 4, alignItems: 'start' },
+              ),
               text(`★ ${scoreText(first)}${count ? `  ·  ${count}人评分` : ''}`, {
                 font: { size: 12, weight: 'semibold' },
                 textColor: COLORS.score,
