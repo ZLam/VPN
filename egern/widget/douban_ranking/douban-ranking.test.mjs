@@ -65,6 +65,7 @@ function createContext({
   collectionId = 'show_global_best_weekly',
   family = 'systemMedium',
   apiPayload = payload(),
+  detailPayload = { intro: '详情接口简介' },
   failApi = false,
   store = new Map(),
 } = {}) {
@@ -87,6 +88,15 @@ function createContext({
           status: 200,
           async json() {
             return apiPayload;
+          },
+        };
+      }
+
+      if (/\/rexxar\/api\/v2\/(?:movie|tv)\//.test(url)) {
+        return {
+          status: 200,
+          async json() {
+            return detailPayload;
           },
         };
       }
@@ -187,6 +197,24 @@ test('uses the requested collection id and caches data plus the hero poster', as
 
   await renderWidget(ctx);
   assert.equal(calls.length, 2, 'fresh cache should avoid API and image requests');
+});
+
+test('loads and caches the hero intro when the ranking item has no description', async () => {
+  const apiPayload = payload();
+  apiPayload.subject_collection_items[0].description = '';
+  const { ctx, calls, store } = createContext({ family: 'systemLarge', apiPayload });
+
+  const widget = await renderWidget(ctx);
+  assert.match(JSON.stringify(widget), /详情接口简介/);
+  assert.ok(calls.some((url) => url.endsWith('/tv/1')));
+  assert.ok(store.has('douban-ranking:description:1'));
+
+  await renderWidget(ctx);
+  assert.equal(
+    calls.filter((url) => url.endsWith('/tv/1')).length,
+    1,
+    'fresh description cache should avoid another detail request',
+  );
 });
 
 test('falls back to stale cached ranking when the API fails', async () => {

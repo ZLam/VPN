@@ -14,6 +14,7 @@ const COLLECTIONS = {
 };
 
 const API_ROOT = 'https://m.douban.com/rexxar/api/v2/subject_collection';
+const DETAIL_API_ROOT = 'https://m.douban.com/rexxar/api/v2';
 const DEFAULT_REFRESH_HOURS = 24;
 const DEFAULT_TIMEOUT_SECONDS = 10;
 const MINUTE = 60 * 1000;
@@ -76,10 +77,11 @@ function normalizePayload(payload, collection, fetchedAt) {
       id: String(item?.id || ''),
       rank: Number(item?.rank) || index + 1,
       title: String(item?.title || '未命名条目'),
+      subtype: String(item?.subtype || item?.type || 'tv'),
       rating: Number.isFinite(rating) && rating > 0 ? rating : null,
       ratingCount: Number.isFinite(ratingCount) && ratingCount > 0 ? ratingCount : 0,
       subtitle: String(item?.card_subtitle || ''),
-      description: String(item?.description || item?.abstract || ''),
+      description: String(item?.description || item?.abstract || item?.intro || ''),
       tags: Array.isArray(item?.tags)
         ? item.tags.map((tag) => String(tag?.name || '')).filter(Boolean).slice(0, 3)
         : [],
@@ -207,6 +209,47 @@ async function loadHeroPoster(ctx, ranking, collection, timeoutSeconds) {
     return dataUri;
   } catch {
     return null;
+  }
+}
+
+async function loadHeroDescription(ctx, ranking, refreshMs, timeoutSeconds) {
+  const first = ranking.items[0];
+  if (!first?.id || first.description) return first?.description || '';
+
+  const cacheKey = `douban-ranking:description:${first.id}`;
+  const cached = safeGetJSON(ctx.storage, cacheKey);
+  if (
+    cached?.id === first.id &&
+    typeof cached.description === 'string' &&
+    cached.description &&
+    Date.now() - Number(cached.fetchedAt || 0) < refreshMs
+  ) {
+    return cached.description;
+  }
+
+  const subtype = first.subtype === 'movie' ? 'movie' : 'tv';
+
+  try {
+    const response = await ctx.http.get(`${DETAIL_API_ROOT}/${subtype}/${encodeURIComponent(first.id)}`, {
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        Referer: `https://m.douban.com/${subtype}/${encodeURIComponent(first.id)}/`,
+        'User-Agent':
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+      },
+      timeout: timeoutSeconds * 1000,
+      credentials: 'omit',
+    });
+    if (response.status < 200 || response.status >= 300) return cached?.description || '';
+
+    const payload = await response.json();
+    const description = String(payload?.intro || payload?.description || payload?.abstract || '').trim();
+    if (description) {
+      safeSetJSON(ctx.storage, cacheKey, { id: first.id, description, fetchedAt: Date.now() });
+    }
+    return description || cached?.description || '';
+  } catch {
+    return cached?.description || '';
   }
 }
 
@@ -722,10 +765,24 @@ export default async function main(ctx) {
   try {
     collection = selectedCollection(ctx.env);
     const { ranking, cacheState } = await loadRanking(ctx, collection, refreshMs, timeoutSeconds);
-    const poster = await loadHeroPoster(ctx, ranking, collection, timeoutSeconds);
+    const family = ctx.widgetFamily || 'systemMedium';
+    const needsHeroDescription = family === 'systemLarge' || family === 'systemExtraLarge';
+    const [poster, heroDescription] = await Promise.all([
+      loadHeroPoster(ctx, ranking, collection, timeoutSeconds),
+      needsHeroDescription
+        ? loadHeroDescription(ctx, ranking, refreshMs, timeoutSeconds)
+        : Promise.resolve(ranking.items[0]?.description || ''),
+    ]);
+    const displayRanking =
+      heroDescription && ranking.items[0]?.description !== heroDescription
+        ? {
+            ...ranking,
+            items: [{ ...ranking.items[0], description: heroDescription }, ...ranking.items.slice(1)],
+          }
+        : ranking;
     return renderWidget(
-      ctx.widgetFamily || 'systemMedium',
-      ranking,
+      family,
+      displayRanking,
       collection,
       cacheState,
       poster,
