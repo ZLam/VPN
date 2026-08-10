@@ -330,7 +330,7 @@ rules:
 
 # [MITM]
 mitm:
-  enabled: false
+  enabled: true
 modules:
 - url: https://raw.githubusercontent.com/Maasea/sgmodule/master/YouTube.Enhance.sgmodule
   enabled: true
