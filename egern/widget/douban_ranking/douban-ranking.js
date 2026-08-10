@@ -11,6 +11,12 @@ const COLLECTIONS = {
     symbol: 'play.tv.fill',
     accent: '#7C83FD',
   },
+  movie_weekly_best: {
+    fallbackName: '豆瓣一周口碑电影榜',
+    shortName: '口碑电影',
+    symbol: 'film.fill',
+    accent: '#30A46C',
+  },
 };
 
 const API_ROOT = 'https://m.douban.com/rexxar/api/v2/subject_collection';
@@ -654,7 +660,7 @@ function accessoryCircularWidget(ranking, collection, refreshAfter) {
     refreshAfter,
     url: ranking.listUrl,
     children: [
-      text(collection.id.startsWith('show_') ? '综' : '剧', {
+      text(collection.id.startsWith('show_') ? '综' : collection.id.startsWith('movie_') ? '影' : '剧', {
         font: { size: 10, weight: 'bold' },
         textColor: collection.accent,
         textAlign: 'center',

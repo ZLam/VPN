@@ -199,6 +199,21 @@ test('uses the requested collection id and caches data plus the hero poster', as
   assert.equal(calls.length, 2, 'fresh cache should avoid API and image requests');
 });
 
+test('supports the weekly movie collection and its accessory label', async () => {
+  const apiPayload = payload('一周口碑电影榜');
+  apiPayload.subject_collection_items[0].subtype = 'movie';
+  const { ctx, calls } = createContext({
+    collectionId: 'movie_weekly_best',
+    family: 'accessoryCircular',
+    apiPayload,
+  });
+
+  const widget = await renderWidget(ctx);
+  assert.match(calls[0], /movie_weekly_best\/items/);
+  assert.equal(widget.url, 'https://m.douban.com/subject_collection/movie_weekly_best');
+  assert.equal(widget.children[0].text, '影');
+});
+
 test('loads and caches the hero intro when the ranking item has no description', async () => {
   const apiPayload = payload();
   apiPayload.subject_collection_items[0].description = '';
