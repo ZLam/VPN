@@ -538,6 +538,7 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const first = ranking.items[0];
   const count = abbreviatedCount(first.ratingCount);
   const titleMaxLines = Array.from(first.title).length > 13 ? 2 : 1;
+  const descriptionMaxLines = Math.max(2, 4 - (titleMaxLines - 1) - (first.tags.length ? 1 : 0));
 
   return {
     type: 'widget',
@@ -590,7 +591,7 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
                 ? text(first.description, {
                     font: { size: 10, weight: 'regular' },
                     textColor: COLORS.secondary,
-                    maxLines: 2,
+                    maxLines: descriptionMaxLines,
                     minScale: 0.75,
                   })
                 : spacer(),

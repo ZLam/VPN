@@ -233,6 +233,27 @@ test('uses a compact hero title row unless the title needs two lines', async () 
   assert.equal(longTitleRow.children[1].maxLines, 2);
 });
 
+test('extends the hero description into available vertical space', async () => {
+  const shortPayload = payload();
+  shortPayload.subject_collection_items[0].tags = [];
+  const shortContext = createContext({ family: 'systemLarge', apiPayload: shortPayload });
+  const shortWidget = await renderWidget(shortContext.ctx);
+  const shortDescription = shortWidget.children[1].children[1].children.find(
+    (child) => child.text === '榜首简介',
+  );
+  assert.equal(shortDescription.maxLines, 4);
+
+  const longPayload = payload();
+  longPayload.subject_collection_items[0].title = '孤单又灿烂的神：鬼怪十周年特辑';
+  longPayload.subject_collection_items[0].tags = [];
+  const longContext = createContext({ family: 'systemLarge', apiPayload: longPayload });
+  const longWidget = await renderWidget(longContext.ctx);
+  const longDescription = longWidget.children[1].children[1].children.find(
+    (child) => child.text === '榜首简介',
+  );
+  assert.equal(longDescription.maxLines, 3);
+});
+
 test('falls back to stale cached ranking when the API fails', async () => {
   const store = new Map();
   const cached = {
