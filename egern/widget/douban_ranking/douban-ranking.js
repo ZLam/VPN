@@ -502,8 +502,6 @@ function smallWidget(ranking, collection, cacheState, poster, refreshAfter) {
 }
 
 function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
-  const first = ranking.items[0];
-
   return {
     type: 'widget',
     backgroundColor: COLORS.background,
@@ -516,19 +514,7 @@ function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
       stack(
         'row',
         [
-          stack(
-            'column',
-            [
-              posterNode(poster, collection, 62, 88),
-              text(`★ ${scoreText(first)}`, {
-                font: { size: 11, weight: 'bold' },
-                textColor: COLORS.score,
-                textAlign: 'center',
-                maxLines: 1,
-              }),
-            ],
-            { gap: 3, alignItems: 'center' },
-          ),
+          posterNode(poster, collection, 62, 88),
           stack(
             'column',
             ranking.items.slice(0, 5).map((item) =>
@@ -551,6 +537,7 @@ function mediumWidget(ranking, collection, cacheState, poster, refreshAfter) {
 function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
   const first = ranking.items[0];
   const count = abbreviatedCount(first.ratingCount);
+  const titleMaxLines = Array.from(first.title).length > 13 ? 2 : 1;
 
   return {
     type: 'widget',
@@ -579,12 +566,12 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
                   text(first.title, {
                     font: { size: 16, weight: 'bold' },
                     textColor: COLORS.primary,
-                    maxLines: 2,
+                    maxLines: titleMaxLines,
                     minScale: 0.75,
                     flex: 1,
                   }),
                 ],
-                { gap: 4, alignItems: 'start' },
+                { gap: 4, height: titleMaxLines === 2 ? 38 : 20, alignItems: 'start' },
               ),
               text(`★ ${scoreText(first)}${count ? `  ·  ${count}人评分` : ''}`, {
                 font: { size: 12, weight: 'semibold' },

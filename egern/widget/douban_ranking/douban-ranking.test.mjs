@@ -217,6 +217,22 @@ test('loads and caches the hero intro when the ranking item has no description',
   );
 });
 
+test('uses a compact hero title row unless the title needs two lines', async () => {
+  const shortContext = createContext({ family: 'systemLarge' });
+  const shortWidget = await renderWidget(shortContext.ctx);
+  const shortTitleRow = shortWidget.children[1].children[1].children[0];
+  assert.equal(shortTitleRow.height, 20);
+  assert.equal(shortTitleRow.children[1].maxLines, 1);
+
+  const longPayload = payload();
+  longPayload.subject_collection_items[0].title = '孤单又灿烂的神：鬼怪十周年特辑';
+  const longContext = createContext({ family: 'systemLarge', apiPayload: longPayload });
+  const longWidget = await renderWidget(longContext.ctx);
+  const longTitleRow = longWidget.children[1].children[1].children[0];
+  assert.equal(longTitleRow.height, 38);
+  assert.equal(longTitleRow.children[1].maxLines, 2);
+});
+
 test('falls back to stale cached ranking when the API fails', async () => {
   const store = new Map();
   const cached = {
