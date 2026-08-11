@@ -585,6 +585,16 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
                 textColor: COLORS.score,
                 maxLines: 1,
               }),
+              ...(first.tags.length
+                ? [
+                    text(first.tags.join('  ·  '), {
+                      font: { size: 9, weight: 'medium' },
+                      textColor: collection.accent,
+                      maxLines: 1,
+                      minScale: 0.7,
+                    }),
+                  ]
+                : []),
               first.subtitle
                 ? text(first.subtitle, {
                     font: { size: 10, weight: 'regular' },
@@ -601,14 +611,6 @@ function largeWidget(ranking, collection, cacheState, poster, refreshAfter) {
                     minScale: 0.75,
                   })
                 : spacer(),
-              first.tags.length
-                ? text(first.tags.join('  ·  '), {
-                    font: { size: 9, weight: 'medium' },
-                    textColor: collection.accent,
-                    maxLines: 1,
-                    minScale: 0.7,
-                  })
-                : spacer(0),
             ],
             { gap: 3, alignItems: 'start', flex: 1 },
           ),

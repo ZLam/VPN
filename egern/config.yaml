@@ -39,7 +39,7 @@ dns:
   - proxy_rule_set:
       match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Reject.yaml
       value: REJECT
-      disabled: true   # 临时关闭：排查 Unity LevelPlay 广告加载失败
+      disabled: true   # 暂时没用，会影响 unity ads
   - proxy_rule_set:
       match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/ChinaDomain.yaml
       value: Domestic-DNS
@@ -263,9 +263,12 @@ rules:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Direct.yaml
     policy: DIRECT
 - rule_set:
+    match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Ads_EasyListChina.yaml
+    policy: REJECT
+- rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/Reject.yaml
     policy: REJECT
-    disabled: true   # 临时关闭：排查 Unity LevelPlay 广告加载失败
+    disabled: true   # 暂时没用，会影响 unity ads
 - rule_set:
     match: https://github.com/Repcz/Tool/raw/X/Egern/Rules/AI.yaml
     policy: AI
