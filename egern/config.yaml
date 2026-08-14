@@ -90,16 +90,25 @@ policy_groups:
     - http://your-service-provider
     hidden: false
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Static.png
+- external:
+    name: My Node
+    type: select
+    urls:
+    - http://your-service-provider
+    hidden: false
+    icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Static.png
 - select:
     name: AI Node
     policies:
     - Manual
+    - My Node
     flatten: true
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Static.png
 - select:
     name: Global
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -110,6 +119,7 @@ policy_groups:
     name: Streaming
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -120,6 +130,7 @@ policy_groups:
     name: Microsoft
     policies:
     - Manual
+    - My Node
     - DIRECT
     - HongKong
     - United States
@@ -131,6 +142,7 @@ policy_groups:
     name: Apple
     policies:
     - Manual
+    - My Node
     - DIRECT
     - HongKong
     - United States
@@ -142,6 +154,7 @@ policy_groups:
     name: Google
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -151,8 +164,8 @@ policy_groups:
 - select:
     name: AI
     policies:
-    - Manual
     - AI Node
+    - Manual
     - HongKong
     - United States
     - Singapore
@@ -163,6 +176,7 @@ policy_groups:
     name: Social
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -173,6 +187,7 @@ policy_groups:
     name: Telegram
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -183,6 +198,7 @@ policy_groups:
     name: Game
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -192,14 +208,16 @@ policy_groups:
 - select:
     name: Emby
     policies:
-    - Manual
     - DIRECT
+    - Manual
+    - My Node
     flatten: true
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Emby.png
 - select:
     name: Spotify
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
@@ -210,6 +228,7 @@ policy_groups:
     name: Final
     policies:
     - Manual
+    - My Node
     - HongKong
     - United States
     - Singapore
