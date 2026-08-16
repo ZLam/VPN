@@ -359,8 +359,13 @@ test('large widgets show five entries with latest and next episodes on separate 
   const firstRow = widget.children[1].children[0];
   assert.equal(firstRow.direction, 'column');
   assert.equal(firstRow.children.length, 3);
+  assert.equal(firstRow.alignItems, 'start');
+  assert.equal(firstRow.height, 51);
+  assert.deepEqual(firstRow.padding, [1, 8, 3, 8]);
   assert.match(allText(firstRow.children[1]), /^已播 /);
   assert.match(allText(firstRow.children[2]), /^下集 /);
+  assert.equal(firstRow.children[1].textAlign, 'left');
+  assert.equal(firstRow.children[2].textAlign, 'left');
 });
 
 test('distinguishes whole-show, season-complete, and scheduling states', async () => {

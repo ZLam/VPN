@@ -448,6 +448,7 @@ function showRow(entry, large) {
   const latestText = text(latest, {
     font: { size: large ? 10 : 9, weight: 'regular' },
     textColor: COLORS.secondary,
+    ...(large ? { textAlign: 'left' } : {}),
     maxLines: 1,
     minScale: 0.65,
     ...(large ? {} : { flex: 1 }),
@@ -455,7 +456,7 @@ function showRow(entry, large) {
   const nextText = text(next, {
     font: { size: large ? 10 : 9, weight: 'medium' },
     textColor: show.next ? COLORS.accent : COLORS.tertiary,
-    ...(large ? {} : { textAlign: 'right' }),
+    textAlign: large ? 'left' : 'right',
     maxLines: 1,
     minScale: 0.62,
     ...(large ? {} : { flex: 1 }),
@@ -497,8 +498,9 @@ function showRow(entry, large) {
     ],
     {
       gap: 2,
-      height: large ? 49 : 31,
-      padding: large ? [0, 8] : [0, 7],
+      height: large ? 51 : 31,
+      padding: large ? [1, 8, 3, 8] : [0, 7],
+      alignItems: large ? 'start' : 'center',
       backgroundColor: COLORS.card,
       borderRadius: 8,
     },
@@ -524,8 +526,9 @@ function errorRow(entry, large) {
     ],
     {
       gap: 2,
-      height: large ? 49 : 31,
-      padding: large ? [0, 8] : [0, 7],
+      height: large ? 51 : 31,
+      padding: large ? [1, 8, 3, 8] : [0, 7],
+      alignItems: large ? 'start' : 'center',
       backgroundColor: COLORS.card,
       borderRadius: 8,
     },
