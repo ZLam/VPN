@@ -49,6 +49,7 @@ function showPayload(id, name = `TVmaze Official ${id}`, overrides = {}) {
         url: `https://www.tvmaze.com/episodes/${id}10`,
       },
       nextepisode: nextEpisode,
+      seasons: [],
     },
     ...overrides,
   };
@@ -168,10 +169,14 @@ test('uses an explicit id and always displays the TVmaze show name', async () =>
 
   assert.equal(calls.length, 1);
   assert.match(calls[0], /\/shows\/42\?/);
+  assert.match(calls[0], /embed%5B%5D=seasons/);
   assert.match(renderedText, /Official TVmaze Name/);
   assert.doesNotMatch(renderedText, /用户填写的名字/);
   assert.match(renderedText, /S02E10/);
+  assert.match(renderedText, /8月15日/);
   assert.match(renderedText, /S03E01/);
+  assert.match(renderedText, /1月2日/);
+  assert.doesNotMatch(renderedText, /21:00/);
 });
 
 test('resolves a missing id by exact name before loading the show', async () => {
@@ -217,7 +222,7 @@ test('uses stale show data when a daily refresh fails', async () => {
 
   await renderWidget(setup.ctx);
   const cacheKey = [...setup.store.keys()].find((key) =>
-    key.startsWith('episode-tracker:show:v1:8'),
+    key.startsWith('episode-tracker:show:v2:8'),
   );
   const cached = setup.store.get(cacheKey);
   setup.store.set(cacheKey, { ...cached, fetchedAt: Date.now() - 25 * HOUR });
@@ -301,10 +306,76 @@ test('shows ended and unscheduled states without crashing', async () => {
   const widget = await renderWidget(setup.ctx);
   const renderedText = allText(widget);
 
-  assert.match(renderedText, /已完结/);
+  assert.match(renderedText, /全剧已完结/);
   assert.match(renderedText, /待公布/);
   assert.match(renderedText, /暂无记录/);
   assert.doesNotMatch(renderedText, /尚未开播/);
+});
+
+test('distinguishes season completion from whole-show and scheduling states', async () => {
+  const previousEpisode = {
+    id: 9221510,
+    name: 'Episode 10',
+    season: 1,
+    number: 10,
+    type: 'regular',
+    airdate: '2000-07-23',
+    airtime: '20:40',
+    airstamp: '2000-07-23T11:40:00+00:00',
+  };
+  const setup = createContext({
+    family: 'systemLarge',
+    trackedShows: [92215, 23, 24, 25].map((id) => ({ name: '', id: String(id) })),
+    showOverrides: {
+      92215: {
+        status: 'To Be Determined',
+        ended: null,
+        _embedded: {
+          previousepisode: previousEpisode,
+          nextepisode: null,
+          seasons: [
+            {
+              number: 1,
+              episodeOrder: null,
+              premiereDate: '2000-05-21',
+              endDate: '2000-07-23',
+            },
+          ],
+        },
+      },
+      23: {
+        status: 'Running',
+        _embedded: {
+          previousepisode: previousEpisode,
+          nextepisode: null,
+          seasons: [{ number: 1, episodeOrder: 10, endDate: null }],
+        },
+      },
+      24: {
+        status: 'To Be Determined',
+        _embedded: {
+          previousepisode: previousEpisode,
+          nextepisode: null,
+          seasons: [{ number: 1, episodeOrder: 12, endDate: null }],
+        },
+      },
+      25: {
+        status: 'Running',
+        _embedded: {
+          previousepisode: previousEpisode,
+          nextepisode: null,
+          seasons: [{ number: 1, episodeOrder: null, endDate: null }],
+        },
+      },
+    },
+  });
+  const widget = await renderWidget(setup.ctx);
+  const renderedText = allText(widget);
+
+  assert.match(renderedText, /本季已播完/);
+  assert.match(renderedText, /后续待定/);
+  assert.match(renderedText, /下集未定/);
+  assert.doesNotMatch(renderedText, /下集 本季已播完/);
 });
 
 test('only calls a show not yet aired when its premiere date is in the future', async () => {

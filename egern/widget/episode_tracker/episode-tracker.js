@@ -174,6 +174,18 @@ function normalizeEpisode(episode) {
   };
 }
 
+function normalizeSeason(season) {
+  if (!season || typeof season !== 'object') return null;
+  const number = Number(season.number);
+  const episodeOrder = Number(season.episodeOrder);
+  return {
+    number: Number.isFinite(number) && number > 0 ? number : null,
+    episodeOrder: Number.isFinite(episodeOrder) && episodeOrder > 0 ? episodeOrder : null,
+    premiereDate: String(season.premiereDate || ''),
+    endDate: String(season.endDate || ''),
+  };
+}
+
 function normalizeShow(payload, expectedId) {
   const id = normalizedId(payload?.id);
   const name = String(payload?.name || '').trim();
@@ -188,6 +200,9 @@ function normalizeShow(payload, expectedId) {
     url: String(payload.url || `${TVMAZE_URL}/shows/${id}`),
     latest: normalizeEpisode(payload?._embedded?.previousepisode),
     next: normalizeEpisode(payload?._embedded?.nextepisode),
+    seasons: Array.isArray(payload?._embedded?.seasons)
+      ? payload._embedded.seasons.map(normalizeSeason).filter(Boolean)
+      : [],
   };
 }
 
@@ -202,12 +217,12 @@ function isCachedShow(value, id) {
 }
 
 async function fetchShow(ctx, id, timeoutSeconds) {
-  const url = `${API_ROOT}/shows/${encodeURIComponent(id)}?embed%5B%5D=previousepisode&embed%5B%5D=nextepisode`;
+  const url = `${API_ROOT}/shows/${encodeURIComponent(id)}?embed%5B%5D=previousepisode&embed%5B%5D=nextepisode&embed%5B%5D=seasons`;
   return normalizeShow(await fetchJSON(ctx, url, timeoutSeconds), id);
 }
 
 async function loadShow(ctx, id, refreshMs, timeoutSeconds) {
-  const cacheKey = `episode-tracker:show:v1:${id}`;
+  const cacheKey = `episode-tracker:show:v2:${id}`;
   const cached = safeGetJSON(ctx.storage, cacheKey);
   const now = Date.now();
 
@@ -305,32 +320,63 @@ function sameLocalDay(first, second) {
   );
 }
 
-function clockText(date) {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function formatAirTime(episode, now = new Date()) {
+function formatAirDate(episode, now = new Date(), unknownText = '待公布') {
   if (!episode) return '';
 
   if (episode.airstamp) {
     const date = new Date(episode.airstamp);
     if (!Number.isNaN(date.getTime())) {
       const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      if (sameLocalDay(date, now)) return `今天 ${clockText(date)}`;
-      if (sameLocalDay(date, tomorrow)) return `明天 ${clockText(date)}`;
-      return `${date.getMonth() + 1}月${date.getDate()}日 ${clockText(date)}`;
+      if (sameLocalDay(date, now)) return '今天';
+      if (sameLocalDay(date, tomorrow)) return '明天';
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
     }
   }
 
   const parts = dateParts(episode.airdate);
-  if (!parts) return '待公布';
-  const dateLabel = `${parts.month}月${parts.day}日`;
-  return episode.airtime ? `${dateLabel} ${episode.airtime}` : dateLabel;
+  if (!parts) return unknownText;
+  return `${parts.month}月${parts.day}日`;
 }
 
 function latestCompact(show) {
-  if (show.latest) return episodeCode(show.latest);
+  if (show.latest) {
+    return `${episodeCode(show.latest)} · ${formatAirDate(show.latest, new Date(), '日期未知')}`;
+  }
   return hasNotPremiered(show) ? '尚未开播' : '暂无记录';
+}
+
+function dateIsOnOrBeforeToday(value, now = new Date()) {
+  const parts = dateParts(value);
+  if (!parts) return false;
+  const target = parts.year * 10000 + parts.month * 100 + parts.day;
+  const today = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  return target <= today;
+}
+
+function currentSeason(show) {
+  if (
+    !show.latest ||
+    !Number.isFinite(show.latest.season) ||
+    !Array.isArray(show.seasons)
+  ) {
+    return null;
+  }
+  return show.seasons.find((season) => season.number === show.latest.season) || null;
+}
+
+function showHasEnded(show) {
+  return show.status.toLowerCase() === 'ended' || dateIsOnOrBeforeToday(show.ended);
+}
+
+function currentSeasonHasEnded(show) {
+  const season = currentSeason(show);
+  if (!season) return false;
+  if (dateIsOnOrBeforeToday(season.endDate)) return true;
+  return (
+    Number.isFinite(season.episodeOrder) &&
+    Number.isFinite(show.latest?.number) &&
+    show.latest.number >= season.episodeOrder
+  );
 }
 
 function hasNotPremiered(show, now = new Date()) {
@@ -340,15 +386,19 @@ function hasNotPremiered(show, now = new Date()) {
   return premiere.getTime() > now.getTime();
 }
 
-function nextCompact(show) {
-  if (show.next) return `${episodeCode(show.next)} · ${formatAirTime(show.next)}`;
-  return show.status.toLowerCase() === 'ended' ? '已完结' : '待定';
+function nextStatus(show) {
+  if (show.next) return `下集 ${episodeCode(show.next)} · ${formatAirDate(show.next)}`;
+  if (showHasEnded(show)) return '全剧已完结';
+  if (currentSeasonHasEnded(show)) return '本季已播完';
+  if (show.status.toLowerCase() === 'to be determined') return '后续待定';
+  return '下集未定';
 }
 
 function episodeWithName(prefix, episode, fallback) {
   if (!episode) return `${prefix} ${fallback}`;
   const name = episode.name ? ` · ${episode.name}` : '';
-  return `${prefix} ${episodeCode(episode)}${name}`;
+  const date = formatAirDate(episode, new Date(), '日期未知');
+  return `${prefix} ${episodeCode(episode)}${name} · ${date}`;
 }
 
 function showRow(entry, large) {
@@ -358,11 +408,10 @@ function showRow(entry, large) {
   const latest = large
     ? episodeWithName('已播', show.latest, hasNotPremiered(show) ? '尚未开播' : '暂无记录')
     : `已播 ${latestCompact(show)}`;
-  const next = show.next
-    ? large
-      ? `下集 ${episodeCode(show.next)}${show.next.name ? ` · ${show.next.name}` : ''} · ${formatAirTime(show.next)}`
-      : `下集 ${nextCompact(show)}`
-    : `下集 ${nextCompact(show)}`;
+  const next =
+    show.next && large
+      ? `下集 ${episodeCode(show.next)}${show.next.name ? ` · ${show.next.name}` : ''} · ${formatAirDate(show.next)}`
+      : nextStatus(show);
 
   return stack(
     'column',
