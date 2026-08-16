@@ -1,0 +1,20 @@
+name: TVmaze 剧集追踪 Widget
+description: 使用 TVmaze 跟踪剧集的最近已播集、下一集和播出时间，支持中号、大号、分页与 24 小时缓存。
+author: ZLam
+homepage: https://github.com/ZLam/VPN
+icon: play.tv.fill
+
+scriptings:
+- generic:
+    name: episode-tracker
+    script_url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/episode_tracker/episode-tracker.js
+    timeout: 30
+
+widgets:
+- name: 剧集追踪
+  script_name: episode-tracker
+  env:
+    TRACKED_SHOWS: '[]'
+    PAGE: '1'
+    REFRESH_HOURS: '24'
+    REQUEST_TIMEOUT_SECONDS: '10'
