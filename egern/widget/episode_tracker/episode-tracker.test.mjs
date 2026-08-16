@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const source = await readFile(new URL('./episode-tracker.js', import.meta.url), 'utf8');
 const manifest = await readFile(new URL('./episode-tracker.yaml', import.meta.url), 'utf8');
+const readme = await readFile(new URL('./README.md', import.meta.url), 'utf8');
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { default: renderWidget } = await import(moduleUrl);
 
@@ -16,56 +17,57 @@ function allText(node) {
   return [own, children].filter(Boolean).join('\n');
 }
 
-function showPayload(id, name = `TVmaze Official ${id}`, overrides = {}) {
-  const nextEpisode = {
-    id: Number(id) * 100 + 11,
-    name: 'Next Chapter',
-    season: 3,
-    number: 1,
-    type: 'regular',
-    airdate: '2099-01-02',
-    airtime: '21:00',
-    airstamp: '2099-01-02T21:00:00+08:00',
-    url: `https://www.tvmaze.com/episodes/${id}11`,
-  };
-
+function tmdbPayload(id, name = `TMDB Official ${id}`, overrides = {}) {
   return {
     id: Number(id),
     name,
-    status: 'Running',
-    premiered: '2024-01-01',
-    ended: null,
-    url: `https://www.tvmaze.com/shows/${id}/official-${id}`,
-    _embedded: {
-      previousepisode: {
-        id: Number(id) * 100 + 10,
-        name: 'Latest Chapter',
-        season: 2,
-        number: 10,
-        type: 'regular',
-        airdate: '2026-08-15',
-        airtime: '21:00',
-        airstamp: '2026-08-15T21:00:00+08:00',
-        url: `https://www.tvmaze.com/episodes/${id}10`,
-      },
-      nextepisode: nextEpisode,
-      seasons: [],
+    original_name: `Original ${id}`,
+    status: 'Returning Series',
+    in_production: true,
+    first_air_date: '2024-01-01',
+    last_air_date: '2026-08-15',
+    last_episode_to_air: {
+      id: Number(id) * 100 + 10,
+      name: 'Latest Chapter',
+      season_number: 2,
+      episode_number: 10,
+      air_date: '2026-08-15',
+      show_id: Number(id),
     },
+    next_episode_to_air: {
+      id: Number(id) * 100 + 11,
+      name: 'Next Chapter',
+      season_number: 3,
+      episode_number: 1,
+      air_date: '2099-01-02',
+      show_id: Number(id),
+    },
+    seasons: [
+      { id: Number(id) * 10 + 2, season_number: 2, episode_count: 10, air_date: '2026-01-01' },
+      { id: Number(id) * 10 + 3, season_number: 3, episode_count: 8, air_date: '2099-01-02' },
+    ],
     ...overrides,
   };
 }
 
 function createContext({
-  trackedShows = [{ name: 'User Alias', id: '1' }],
+  trackedShows = [{ name: 'User Lookup Name', id: '1' }],
   family = 'systemMedium',
   page = '1',
+  token = 'test-token',
+  language = 'zh-CN',
   store = new Map(),
   showNames = {},
   showOverrides = {},
   searchResults = {},
 } = {}) {
   const calls = [];
-  const controls = { failedShowIds: new Set(), failedSearches: new Set() };
+  const controls = {
+    failedShowIds: new Set(),
+    failedSearches: new Set(),
+    statusByShowId: new Map(),
+    invalidToken: false,
+  };
 
   const storage = {
     getJSON(key) {
@@ -77,31 +79,49 @@ function createContext({
   };
 
   const http = {
-    async get(url) {
-      calls.push(url);
+    async get(url, options) {
+      calls.push({ url, options });
 
-      if (url.includes('/search/shows?')) {
-        const query = new URL(url).searchParams.get('q');
-        if (controls.failedSearches.has(query)) throw new Error('search offline');
-        const results = searchResults[query] ?? [
-          { score: 1, show: { id: 9, name: query } },
-        ];
+      if (controls.invalidToken) {
         return {
-          status: 200,
+          status: 401,
           async json() {
-            return results;
+            return { status_code: 7, status_message: 'Invalid API key' };
           },
         };
       }
 
-      const match = url.match(/\/shows\/(\d+)\?/);
-      if (match) {
-        const id = match[1];
-        if (controls.failedShowIds.has(id)) throw new Error('show offline');
+      if (url.includes('/3/search/tv?')) {
+        const query = new URL(url).searchParams.get('query');
+        if (controls.failedSearches.has(query)) throw new Error('search offline');
+        const results = searchResults[query] ?? [
+          { id: 9, name: query, original_name: query },
+        ];
         return {
           status: 200,
           async json() {
-            return showPayload(id, showNames[id], showOverrides[id]);
+            return { page: 1, results, total_pages: 1, total_results: results.length };
+          },
+        };
+      }
+
+      const match = url.match(/\/3\/tv\/(\d+)\?/);
+      if (match) {
+        const id = match[1];
+        if (controls.failedShowIds.has(id)) throw new Error('show offline');
+        const status = controls.statusByShowId.get(id);
+        if (status) {
+          return {
+            status,
+            async json() {
+              return { status_code: status };
+            },
+          };
+        }
+        return {
+          status: 200,
+          async json() {
+            return tmdbPayload(id, showNames[id], showOverrides[id]);
           },
         };
       }
@@ -113,6 +133,8 @@ function createContext({
   return {
     ctx: {
       env: {
+        TMDB_ACCESS_TOKEN: token,
+        TMDB_LANGUAGE: language,
         TRACKED_SHOWS:
           typeof trackedShows === 'string' ? trackedShows : JSON.stringify(trackedShows),
         PAGE: page,
@@ -129,9 +151,11 @@ function createContext({
   };
 }
 
-test('declares editable module parameters in env_schema', () => {
+test('declares all editable TMDB module parameters in env_schema', () => {
   assert.match(manifest, /^env_schema:/m);
   for (const key of [
+    'TMDB_ACCESS_TOKEN',
+    'TMDB_LANGUAGE',
     'TRACKED_SHOWS',
     'PAGE',
     'REFRESH_HOURS',
@@ -141,8 +165,8 @@ test('declares editable module parameters in env_schema', () => {
   }
 });
 
-test('renders an empty state without making a request', async () => {
-  const { ctx, calls } = createContext({ trackedShows: [] });
+test('renders an empty state without requiring a token or making a request', async () => {
+  const { ctx, calls } = createContext({ trackedShows: [], token: '' });
   const widget = await renderWidget(ctx);
 
   assert.equal(widget.type, 'widget');
@@ -159,19 +183,27 @@ test('renders a separate configuration error for invalid JSON', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('uses an explicit id and always displays the TVmaze show name', async () => {
+test('requires a TMDB access token only when shows need loading', async () => {
+  const { ctx, calls } = createContext({ token: '' });
+  const widget = await renderWidget(ctx);
+
+  assert.match(allText(widget), /未配置 TMDB Token/);
+  assert.equal(calls.length, 0);
+});
+
+test('loads a TMDB id with bearer auth and displays localized API data', async () => {
   const { ctx, calls } = createContext({
-    trackedShows: [{ name: '用户填写的名字', id: '42' }],
-    showNames: { 42: 'Official TVmaze Name' },
+    trackedShows: [{ name: '用户搜索名称', id: '42' }],
+    showNames: { 42: 'TMDB 本地化名称' },
   });
   const widget = await renderWidget(ctx);
   const renderedText = allText(widget);
 
   assert.equal(calls.length, 1);
-  assert.match(calls[0], /\/shows\/42\?/);
-  assert.match(calls[0], /embed%5B%5D=seasons/);
-  assert.match(renderedText, /Official TVmaze Name/);
-  assert.doesNotMatch(renderedText, /用户填写的名字/);
+  assert.match(calls[0].url, /\/3\/tv\/42\?language=zh-CN/);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer test-token');
+  assert.match(renderedText, /TMDB 本地化名称/);
+  assert.doesNotMatch(renderedText, /用户搜索名称/);
   assert.match(renderedText, /S02E10/);
   assert.match(renderedText, /8月15日/);
   assert.match(renderedText, /S03E01/);
@@ -179,33 +211,69 @@ test('uses an explicit id and always displays the TVmaze show name', async () =>
   assert.doesNotMatch(renderedText, /21:00/);
 });
 
-test('resolves a missing id by exact name before loading the show', async () => {
+test('displayName overrides TMDB names and changes without invalidating data cache', async () => {
+  const setup = createContext({
+    trackedShows: [{ name: 'Severance', id: '42', displayName: '人生切割术' }],
+    showNames: { 42: '人生切割' },
+  });
+
+  const firstWidget = await renderWidget(setup.ctx);
+  assert.match(allText(firstWidget), /人生切割术/);
+  assert.doesNotMatch(allText(firstWidget), /人生切割\n/);
+  assert.equal(setup.calls.length, 1);
+
+  setup.ctx.env.TRACKED_SHOWS = JSON.stringify([
+    { name: 'Severance', id: '42', displayName: '切割人生' },
+  ]);
+  const secondWidget = await renderWidget(setup.ctx);
+  assert.match(allText(secondWidget), /切割人生/);
+  assert.equal(setup.calls.length, 1, 'display-only changes should keep the fresh API cache');
+});
+
+test('falls back to original_name when localized TMDB name is empty', async () => {
+  const { ctx } = createContext({
+    trackedShows: [{ name: '', id: '44' }],
+    showOverrides: { 44: { name: '', original_name: 'Original Series Name' } },
+  });
+  const widget = await renderWidget(ctx);
+
+  assert.match(allText(widget), /Original Series Name/);
+});
+
+test('resolves a missing id by exact localized or original name', async () => {
   const { ctx, calls, store } = createContext({
     trackedShows: [{ name: 'Top Gear', id: '' }],
     searchResults: {
       'Top Gear': [
-        { score: 0.99, show: { id: 2, name: 'Top Gear America' } },
-        { score: 0.95, show: { id: 3, name: 'Top Gear' } },
+        { id: 2, name: 'Top Gear America', original_name: 'Top Gear America' },
+        { id: 3, name: '英国疯狂汽车秀', original_name: 'Top Gear' },
       ],
     },
-    showNames: { 3: 'Top Gear (TVmaze)' },
+    showNames: { 3: '英国疯狂汽车秀' },
   });
   const widget = await renderWidget(ctx);
 
   assert.equal(calls.length, 2);
-  assert.match(calls[0], /\/search\/shows\?/);
-  assert.match(calls[1], /\/shows\/3\?/);
-  assert.match(allText(widget), /Top Gear \(TVmaze\)/);
-  assert.ok([...store.keys()].some((key) => key.startsWith('episode-tracker:resolved-id:v1:')));
+  assert.match(calls[0].url, /\/3\/search\/tv\?/);
+  assert.match(calls[0].url, /language=zh-CN/);
+  assert.match(calls[1].url, /\/3\/tv\/3\?/);
+  assert.match(allText(widget), /英国疯狂汽车秀/);
+  assert.ok(
+    [...store.keys()].some((key) =>
+      key.startsWith('episode-tracker:tmdb:resolved-id:v1:'),
+    ),
+  );
 });
 
-test('fresh id and show caches avoid every subsequent HTTP request', async () => {
+test('fresh name and show caches avoid all subsequent HTTP requests', async () => {
   const setup = createContext({
     trackedShows: [{ name: 'Searchable Show', id: '' }],
     searchResults: {
-      'Searchable Show': [{ score: 1, show: { id: 15, name: 'Searchable Show' } }],
+      'Searchable Show': [
+        { id: 15, name: 'Searchable Show', original_name: 'Searchable Show' },
+      ],
     },
-    showNames: { 15: 'Official Cached Show' },
+    showNames: { 15: 'TMDB Cached Show' },
   });
 
   await renderWidget(setup.ctx);
@@ -214,92 +282,116 @@ test('fresh id and show caches avoid every subsequent HTTP request', async () =>
   assert.equal(setup.calls.length, 2);
 });
 
-test('uses stale show data when a daily refresh fails', async () => {
+test('separates localized show caches by language', async () => {
+  const setup = createContext({ trackedShows: [{ name: '', id: '16' }] });
+  await renderWidget(setup.ctx);
+  setup.ctx.env.TMDB_LANGUAGE = 'en-US';
+  await renderWidget(setup.ctx);
+
+  assert.equal(setup.calls.length, 2);
+  assert.match(setup.calls[1].url, /language=en-US/);
+});
+
+test('uses stale TMDB show data when a daily refresh fails', async () => {
   const setup = createContext({
     trackedShows: [{ name: 'Alias', id: '8' }],
-    showNames: { 8: 'Cached Official Show' },
+    showNames: { 8: 'Cached TMDB Show' },
   });
 
   await renderWidget(setup.ctx);
   const cacheKey = [...setup.store.keys()].find((key) =>
-    key.startsWith('episode-tracker:show:v2:8'),
+    key.startsWith('episode-tracker:tmdb:show:v1:zh-CN:8'),
   );
   const cached = setup.store.get(cacheKey);
   setup.store.set(cacheKey, { ...cached, fetchedAt: Date.now() - 25 * HOUR });
   setup.controls.failedShowIds.add('8');
 
   const widget = await renderWidget(setup.ctx);
-  assert.match(allText(widget), /Cached Official Show/);
+  assert.match(allText(widget), /Cached TMDB Show/);
   assert.match(allText(widget), /缓存/);
 });
 
-test('keeps rendering other shows when one item fails', async () => {
+test('keeps rendering other shows when one TMDB item fails', async () => {
   const setup = createContext({
     trackedShows: [
       { name: 'First Alias', id: '1' },
-      { name: 'Broken Alias', id: '2' },
+      { name: 'Broken Alias', id: '2', displayName: '加载失败的剧' },
     ],
-    showNames: { 1: 'Working Official Show' },
+    showNames: { 1: 'Working TMDB Show' },
   });
-  setup.controls.failedShowIds.add('2');
+  setup.controls.statusByShowId.set('2', 404);
 
   const widget = await renderWidget(setup.ctx);
   const renderedText = allText(widget);
-  assert.match(renderedText, /Working Official Show/);
-  assert.match(renderedText, /Broken Alias/);
+  assert.match(renderedText, /Working TMDB Show/);
+  assert.match(renderedText, /加载失败的剧/);
   assert.match(renderedText, /部分失败/);
-  assert.match(renderedText, /获取失败/);
+  assert.match(renderedText, /找不到对应的 TMDB 剧集/);
 });
 
-test('medium pagination requests only three shows from the selected page', async () => {
+test('medium pagination requests only three TMDB shows from the selected page', async () => {
   const setup = createContext({
     trackedShows: [1, 2, 3, 4, 5, 6, 7].map((id) => ({ name: '', id: String(id) })),
     page: '2',
   });
   const widget = await renderWidget(setup.ctx);
-  const showCalls = setup.calls.filter((url) => url.includes('/shows/'));
+  const showCalls = setup.calls.filter((call) => call.url.includes('/3/tv/'));
 
   assert.equal(showCalls.length, 3);
-  assert.match(showCalls[0], /\/shows\/4\?/);
-  assert.match(showCalls[2], /\/shows\/6\?/);
+  assert.match(showCalls[0].url, /\/3\/tv\/4\?/);
+  assert.match(showCalls[2].url, /\/3\/tv\/6\?/);
   assert.match(allText(widget), /2\/3/);
-  assert.doesNotMatch(allText(widget), /TVmaze Official 1/);
+  assert.doesNotMatch(allText(widget), /TMDB Official 1/);
 });
 
-test('large widgets show seven entries and include episode names', async () => {
+test('large widgets show seven entries and include TMDB episode names', async () => {
   const setup = createContext({
     trackedShows: [1, 2, 3, 4, 5, 6, 7, 8].map((id) => ({ name: '', id: String(id) })),
     family: 'systemLarge',
   });
   const widget = await renderWidget(setup.ctx);
 
-  assert.equal(setup.calls.filter((url) => url.includes('/shows/')).length, 7);
+  assert.equal(setup.calls.filter((call) => call.url.includes('/3/tv/')).length, 7);
   assert.match(allText(widget), /Latest Chapter/);
   assert.match(allText(widget), /Next Chapter/);
   assert.match(allText(widget), /1\/2/);
 });
 
-test('shows ended and unscheduled states without crashing', async () => {
+test('distinguishes whole-show, season-complete, and scheduling states', async () => {
+  const previousEpisode = {
+    id: 100,
+    name: 'Episode 10',
+    season_number: 1,
+    episode_number: 10,
+    air_date: '2000-07-23',
+  };
   const setup = createContext({
-    trackedShows: [
-      { name: '', id: '20' },
-      { name: '', id: '21' },
-    ],
+    family: 'systemLarge',
+    trackedShows: [20, 21, 22, 23].map((id) => ({ name: '', id: String(id) })),
     showOverrides: {
-      20: { status: 'Ended', _embedded: { previousepisode: null, nextepisode: null } },
+      20: {
+        status: 'Ended',
+        last_episode_to_air: previousEpisode,
+        next_episode_to_air: null,
+        seasons: [{ season_number: 1, episode_count: 10, air_date: '2000-01-01' }],
+      },
       21: {
-        _embedded: {
-          previousepisode: null,
-          nextepisode: {
-            id: 2101,
-            name: 'Unscheduled',
-            season: 1,
-            number: 1,
-            airdate: '',
-            airtime: '',
-            airstamp: '',
-          },
-        },
+        status: 'Returning Series',
+        last_episode_to_air: previousEpisode,
+        next_episode_to_air: null,
+        seasons: [{ season_number: 1, episode_count: 10, air_date: '2000-01-01' }],
+      },
+      22: {
+        status: 'Returning Series',
+        last_episode_to_air: previousEpisode,
+        next_episode_to_air: null,
+        seasons: [{ season_number: 1, episode_count: 12, air_date: '2000-01-01' }],
+      },
+      23: {
+        status: 'Unknown',
+        last_episode_to_air: previousEpisode,
+        next_episode_to_air: null,
+        seasons: [{ season_number: 1, episode_count: 12, air_date: '2000-01-01' }],
       },
     },
   });
@@ -307,64 +399,43 @@ test('shows ended and unscheduled states without crashing', async () => {
   const renderedText = allText(widget);
 
   assert.match(renderedText, /全剧已完结/);
-  assert.match(renderedText, /待公布/);
-  assert.match(renderedText, /暂无记录/);
-  assert.doesNotMatch(renderedText, /尚未开播/);
+  assert.match(renderedText, /本季已播完/);
+  assert.match(renderedText, /后续待定/);
+  assert.match(renderedText, /下集未定/);
 });
 
-test('distinguishes season completion from whole-show and scheduling states', async () => {
-  const previousEpisode = {
-    id: 9221510,
-    name: 'Episode 10',
-    season: 1,
-    number: 10,
-    type: 'regular',
-    airdate: '2000-07-23',
-    airtime: '20:40',
-    airstamp: '2000-07-23T11:40:00+00:00',
-  };
+test('next episode data takes priority over an ended status', async () => {
   const setup = createContext({
-    family: 'systemLarge',
-    trackedShows: [92215, 23, 24, 25].map((id) => ({ name: '', id: String(id) })),
+    trackedShows: [{ name: '', id: '24' }],
+    showOverrides: { 24: { status: 'Ended' } },
+  });
+  const widget = await renderWidget(setup.ctx);
+
+  assert.match(allText(widget), /下集 S03E01/);
+  assert.doesNotMatch(allText(widget), /全剧已完结/);
+});
+
+test('shows future and unknown episode dates without crashing', async () => {
+  const setup = createContext({
+    trackedShows: [
+      { name: '', id: '30' },
+      { name: '', id: '31' },
+    ],
     showOverrides: {
-      92215: {
-        status: 'To Be Determined',
-        ended: null,
-        _embedded: {
-          previousepisode: previousEpisode,
-          nextepisode: null,
-          seasons: [
-            {
-              number: 1,
-              episodeOrder: null,
-              premiereDate: '2000-05-21',
-              endDate: '2000-07-23',
-            },
-          ],
-        },
+      30: {
+        status: 'Planned',
+        first_air_date: '2099-01-01',
+        last_episode_to_air: null,
+        next_episode_to_air: null,
+        seasons: [],
       },
-      23: {
-        status: 'Running',
-        _embedded: {
-          previousepisode: previousEpisode,
-          nextepisode: null,
-          seasons: [{ number: 1, episodeOrder: 10, endDate: null }],
-        },
-      },
-      24: {
-        status: 'To Be Determined',
-        _embedded: {
-          previousepisode: previousEpisode,
-          nextepisode: null,
-          seasons: [{ number: 1, episodeOrder: 12, endDate: null }],
-        },
-      },
-      25: {
-        status: 'Running',
-        _embedded: {
-          previousepisode: previousEpisode,
-          nextepisode: null,
-          seasons: [{ number: 1, episodeOrder: null, endDate: null }],
+      31: {
+        next_episode_to_air: {
+          id: 3101,
+          name: 'Unscheduled',
+          season_number: 1,
+          episode_number: 1,
+          air_date: '',
         },
       },
     },
@@ -372,25 +443,17 @@ test('distinguishes season completion from whole-show and scheduling states', as
   const widget = await renderWidget(setup.ctx);
   const renderedText = allText(widget);
 
-  assert.match(renderedText, /本季已播完/);
-  assert.match(renderedText, /后续待定/);
-  assert.match(renderedText, /下集未定/);
-  assert.doesNotMatch(renderedText, /下集 本季已播完/);
+  assert.match(renderedText, /尚未开播/);
+  assert.match(renderedText, /待公布/);
 });
 
-test('only calls a show not yet aired when its premiere date is in the future', async () => {
-  const setup = createContext({
-    trackedShows: [{ name: '', id: '22' }],
-    showOverrides: {
-      22: {
-        premiered: '2099-01-01',
-        _embedded: { previousepisode: null, nextepisode: null },
-      },
-    },
-  });
+test('renders a dedicated state for an invalid TMDB token', async () => {
+  const setup = createContext();
+  setup.controls.invalidToken = true;
   const widget = await renderWidget(setup.ctx);
 
-  assert.match(allText(widget), /尚未开播/);
+  assert.match(allText(widget), /TMDB Token 无效/);
+  assert.equal(setup.calls.length, 1);
 });
 
 test('invalid pages and unsupported sizes do not make requests', async () => {
@@ -408,7 +471,7 @@ test('invalid pages and unsupported sizes do not make requests', async () => {
   assert.equal(unsupported.calls.length, 0);
 });
 
-test('sets a roughly daily refresh date after a live request', async () => {
+test('uses a daily refresh date and TMDB attribution link', async () => {
   const { ctx } = createContext();
   const before = Date.now();
   const widget = await renderWidget(ctx);
@@ -416,6 +479,15 @@ test('sets a roughly daily refresh date after a live request', async () => {
 
   assert.ok(refreshAt >= before + 23.9 * HOUR);
   assert.ok(refreshAt <= Date.now() + 24.1 * HOUR);
-  assert.equal(widget.url, 'https://www.tvmaze.com');
-  assert.match(allText(widget), /Data: TVmaze/);
+  assert.equal(widget.url, 'https://www.themoviedb.org');
+  assert.match(allText(widget), /Data: TMDB/);
+});
+
+test('contains no TVmaze endpoint, branding, or legacy cache namespace', () => {
+  for (const content of [source, manifest, readme]) {
+    assert.doesNotMatch(content, /api\.tvmaze\.com/i);
+    assert.doesNotMatch(content, /Data: TVmaze/i);
+  }
+  assert.doesNotMatch(source, /episode-tracker:show:v2:/);
+  assert.match(source, /episode-tracker:tmdb:show:v1:/);
 });

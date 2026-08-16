@@ -1,5 +1,6 @@
-const API_ROOT = 'https://api.tvmaze.com';
-const TVMAZE_URL = 'https://www.tvmaze.com';
+const API_ROOT = 'https://api.themoviedb.org/3';
+const TMDB_URL = 'https://www.themoviedb.org';
+const DEFAULT_LANGUAGE = 'zh-CN';
 const DEFAULT_REFRESH_HOURS = 24;
 const DEFAULT_TIMEOUT_SECONDS = 10;
 const MEDIUM_PAGE_SIZE = 3;
@@ -13,12 +14,19 @@ const COLORS = {
   primary: { light: '#18202A', dark: '#F4F7FA' },
   secondary: { light: '#66717E', dark: '#A8B1BC' },
   tertiary: { light: '#8B95A1', dark: '#7F8995' },
-  accent: '#06A77D',
+  accent: '#01B4E4',
   warning: '#E59B28',
   error: '#E5484D',
 };
 
 class ConfigurationError extends Error {}
+
+class TmdbRequestError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function positiveNumber(value, fallback) {
   const parsed = Number(value);
@@ -62,6 +70,7 @@ function parseTrackedShows(rawValue) {
     }
 
     const name = String(item.name ?? '').trim();
+    const displayName = String(item.displayName ?? '').trim();
     const rawId = String(item.id ?? '').trim();
     const id = normalizedId(rawId);
 
@@ -75,7 +84,7 @@ function parseTrackedShows(rawValue) {
     const key = id ? `id:${id}` : `name:${normalizedName(name)}`;
     if (seen.has(key)) return;
     seen.add(key);
-    items.push({ name, id });
+    items.push({ name, id, displayName });
   });
 
   return items;
@@ -107,10 +116,18 @@ function cacheToken(value) {
   return (hash >>> 0).toString(36);
 }
 
-async function fetchJSON(ctx, url, timeoutSeconds) {
+function tmdbError(status) {
+  if (status === 401) return new TmdbRequestError('TMDB Token 无效', status);
+  if (status === 404) return new TmdbRequestError('找不到对应的 TMDB 剧集', status);
+  if (status === 429) return new TmdbRequestError('TMDB 请求过于频繁', status);
+  return new TmdbRequestError(`TMDB 请求失败（HTTP ${status}）`, status);
+}
+
+async function fetchJSON(ctx, url, token, timeoutSeconds) {
   const response = await ctx.http.get(url, {
     headers: {
       Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
       'User-Agent': 'Egern-Episode-Tracker/1.0',
     },
     timeout: timeoutSeconds * 1000,
@@ -118,7 +135,7 @@ async function fetchJSON(ctx, url, timeoutSeconds) {
   });
 
   if (response.status < 200 || response.status >= 300) {
-    throw new Error(`TVmaze 请求失败（HTTP ${response.status}）`);
+    throw tmdbError(response.status);
   }
 
   return response.json();
@@ -128,32 +145,44 @@ function chooseSearchResult(results, query) {
   if (!Array.isArray(results) || results.length === 0) return null;
   const normalizedQuery = normalizedName(query);
   return (
-    results.find((result) => normalizedName(result?.show?.name) === normalizedQuery)?.show ||
-    results[0]?.show ||
+    results.find(
+      (result) =>
+        normalizedName(result?.name) === normalizedQuery ||
+        normalizedName(result?.original_name) === normalizedQuery,
+    ) ||
+    results[0] ||
     null
   );
 }
 
-async function resolveShowId(ctx, name, timeoutSeconds) {
+async function resolveShowId(ctx, name, language, token, timeoutSeconds) {
   const query = normalizedName(name);
-  const cacheKey = `episode-tracker:resolved-id:v1:${cacheToken(query)}`;
+  const cacheKey = `episode-tracker:tmdb:resolved-id:v1:${cacheToken(`${language}:${query}`)}`;
   const cached = safeGetJSON(ctx.storage, cacheKey);
 
-  if (cached?.query === query && normalizedId(cached.id)) return String(cached.id);
+  if (
+    cached?.query === query &&
+    cached?.language === language &&
+    normalizedId(cached.id)
+  ) {
+    return String(cached.id);
+  }
 
-  const results = await fetchJSON(
+  const payload = await fetchJSON(
     ctx,
-    `${API_ROOT}/search/shows?q=${encodeURIComponent(name)}`,
+    `${API_ROOT}/search/tv?query=${encodeURIComponent(name)}&language=${encodeURIComponent(language)}&page=1&include_adult=false`,
+    token,
     timeoutSeconds,
   );
-  const show = chooseSearchResult(results, name);
+  const show = chooseSearchResult(payload?.results, name);
   const id = normalizedId(show?.id);
-  if (!id) throw new Error(`TVmaze 中找不到“${name}”`);
+  if (!id) throw new Error(`TMDB 中找不到“${name}”`);
 
   safeSetJSON(ctx.storage, cacheKey, {
     query,
+    language,
     id,
-    resolvedName: String(show.name || ''),
+    resolvedName: String(show.name || show.original_name || ''),
     resolvedAt: Date.now(),
   });
   return id;
@@ -164,44 +193,45 @@ function normalizeEpisode(episode) {
   return {
     id: normalizedId(episode.id),
     name: String(episode.name || ''),
-    season: Number.isFinite(Number(episode.season)) ? Number(episode.season) : null,
-    number: Number.isFinite(Number(episode.number)) ? Number(episode.number) : null,
-    type: String(episode.type || ''),
-    airdate: String(episode.airdate || ''),
-    airtime: String(episode.airtime || ''),
-    airstamp: String(episode.airstamp || ''),
-    url: String(episode.url || ''),
+    season: Number.isFinite(Number(episode.season_number))
+      ? Number(episode.season_number)
+      : null,
+    number: Number.isFinite(Number(episode.episode_number))
+      ? Number(episode.episode_number)
+      : null,
+    airdate: String(episode.air_date || ''),
   };
 }
 
 function normalizeSeason(season) {
   if (!season || typeof season !== 'object') return null;
-  const number = Number(season.number);
-  const episodeOrder = Number(season.episodeOrder);
+  const number = Number(season.season_number);
+  const episodeCount = Number(season.episode_count);
   return {
-    number: Number.isFinite(number) && number > 0 ? number : null,
-    episodeOrder: Number.isFinite(episodeOrder) && episodeOrder > 0 ? episodeOrder : null,
-    premiereDate: String(season.premiereDate || ''),
-    endDate: String(season.endDate || ''),
+    number: Number.isFinite(number) && number >= 0 ? number : null,
+    episodeCount:
+      Number.isFinite(episodeCount) && episodeCount > 0 ? episodeCount : null,
+    airdate: String(season.air_date || ''),
   };
 }
 
 function normalizeShow(payload, expectedId) {
   const id = normalizedId(payload?.id);
-  const name = String(payload?.name || '').trim();
-  if (!id || !name) throw new Error(`TVmaze 返回的剧集 ${expectedId} 数据不完整`);
+  const name = String(payload?.name || payload?.original_name || '').trim();
+  if (!id || !name) throw new Error(`TMDB 返回的剧集 ${expectedId} 数据不完整`);
 
   return {
     id,
     name,
+    originalName: String(payload.original_name || ''),
     status: String(payload.status || ''),
-    premiered: String(payload.premiered || ''),
-    ended: String(payload.ended || ''),
-    url: String(payload.url || `${TVMAZE_URL}/shows/${id}`),
-    latest: normalizeEpisode(payload?._embedded?.previousepisode),
-    next: normalizeEpisode(payload?._embedded?.nextepisode),
-    seasons: Array.isArray(payload?._embedded?.seasons)
-      ? payload._embedded.seasons.map(normalizeSeason).filter(Boolean)
+    inProduction: payload.in_production === true,
+    premiered: String(payload.first_air_date || ''),
+    url: `${TMDB_URL}/tv/${id}`,
+    latest: normalizeEpisode(payload.last_episode_to_air),
+    next: normalizeEpisode(payload.next_episode_to_air),
+    seasons: Array.isArray(payload.seasons)
+      ? payload.seasons.map(normalizeSeason).filter(Boolean)
       : [],
   };
 }
@@ -216,13 +246,14 @@ function isCachedShow(value, id) {
   );
 }
 
-async function fetchShow(ctx, id, timeoutSeconds) {
-  const url = `${API_ROOT}/shows/${encodeURIComponent(id)}?embed%5B%5D=previousepisode&embed%5B%5D=nextepisode&embed%5B%5D=seasons`;
-  return normalizeShow(await fetchJSON(ctx, url, timeoutSeconds), id);
+async function fetchShow(ctx, id, language, token, timeoutSeconds) {
+  const url = `${API_ROOT}/tv/${encodeURIComponent(id)}?language=${encodeURIComponent(language)}`;
+  return normalizeShow(await fetchJSON(ctx, url, token, timeoutSeconds), id);
 }
 
-async function loadShow(ctx, id, refreshMs, timeoutSeconds) {
-  const cacheKey = `episode-tracker:show:v2:${id}`;
+async function loadShow(ctx, id, language, token, refreshMs, timeoutSeconds) {
+  const languageKey = String(language).replace(/[^a-z0-9-]/gi, '_');
+  const cacheKey = `episode-tracker:tmdb:show:v1:${languageKey}:${id}`;
   const cached = safeGetJSON(ctx.storage, cacheKey);
   const now = Date.now();
 
@@ -235,7 +266,7 @@ async function loadShow(ctx, id, refreshMs, timeoutSeconds) {
   }
 
   try {
-    const show = await fetchShow(ctx, id, timeoutSeconds);
+    const show = await fetchShow(ctx, id, language, token, timeoutSeconds);
     const fetchedAt = Date.now();
     safeSetJSON(ctx.storage, cacheKey, { id, fetchedAt, show });
     return { show, cacheState: 'live', nextRefreshAt: fetchedAt + refreshMs };
@@ -253,19 +284,29 @@ async function loadShow(ctx, id, refreshMs, timeoutSeconds) {
 }
 
 function sourceLabel(source) {
-  return source.name || `TVmaze ID ${source.id}`;
+  return source.displayName || source.name || `TMDB ID ${source.id}`;
 }
 
-async function loadTrackedShow(ctx, source, refreshMs, timeoutSeconds) {
+async function loadTrackedShow(ctx, source, language, token, refreshMs, timeoutSeconds) {
   try {
-    const id = source.id || (await resolveShowId(ctx, source.name, timeoutSeconds));
-    const loaded = await loadShow(ctx, id, refreshMs, timeoutSeconds);
+    const id =
+      source.id ||
+      (await resolveShowId(ctx, source.name, language, token, timeoutSeconds));
+    const loaded = await loadShow(
+      ctx,
+      id,
+      language,
+      token,
+      refreshMs,
+      timeoutSeconds,
+    );
     return { type: 'show', source, id, ...loaded };
   } catch (error) {
     return {
       type: 'error',
       source,
       message: String(error?.message || '未知错误'),
+      status: Number(error?.status) || null,
       nextRefreshAt: Date.now() + refreshMs,
     };
   }
@@ -322,19 +363,12 @@ function sameLocalDay(first, second) {
 
 function formatAirDate(episode, now = new Date(), unknownText = '待公布') {
   if (!episode) return '';
-
-  if (episode.airstamp) {
-    const date = new Date(episode.airstamp);
-    if (!Number.isNaN(date.getTime())) {
-      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      if (sameLocalDay(date, now)) return '今天';
-      if (sameLocalDay(date, tomorrow)) return '明天';
-      return `${date.getMonth() + 1}月${date.getDate()}日`;
-    }
-  }
-
   const parts = dateParts(episode.airdate);
   if (!parts) return unknownText;
+  const date = new Date(parts.year, parts.month - 1, parts.day);
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  if (sameLocalDay(date, now)) return '今天';
+  if (sameLocalDay(date, tomorrow)) return '明天';
   return `${parts.month}月${parts.day}日`;
 }
 
@@ -343,14 +377,6 @@ function latestCompact(show) {
     return `${episodeCode(show.latest)} · ${formatAirDate(show.latest, new Date(), '日期未知')}`;
   }
   return hasNotPremiered(show) ? '尚未开播' : '暂无记录';
-}
-
-function dateIsOnOrBeforeToday(value, now = new Date()) {
-  const parts = dateParts(value);
-  if (!parts) return false;
-  const target = parts.year * 10000 + parts.month * 100 + parts.day;
-  const today = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return target <= today;
 }
 
 function currentSeason(show) {
@@ -365,17 +391,17 @@ function currentSeason(show) {
 }
 
 function showHasEnded(show) {
-  return show.status.toLowerCase() === 'ended' || dateIsOnOrBeforeToday(show.ended);
+  const status = show.status.toLowerCase();
+  return status === 'ended' || status === 'canceled' || status === 'cancelled';
 }
 
 function currentSeasonHasEnded(show) {
   const season = currentSeason(show);
   if (!season) return false;
-  if (dateIsOnOrBeforeToday(season.endDate)) return true;
   return (
-    Number.isFinite(season.episodeOrder) &&
+    Number.isFinite(season.episodeCount) &&
     Number.isFinite(show.latest?.number) &&
-    show.latest.number >= season.episodeOrder
+    show.latest.number >= season.episodeCount
   );
 }
 
@@ -390,7 +416,13 @@ function nextStatus(show) {
   if (show.next) return `下集 ${episodeCode(show.next)} · ${formatAirDate(show.next)}`;
   if (showHasEnded(show)) return '全剧已完结';
   if (currentSeasonHasEnded(show)) return '本季已播完';
-  if (show.status.toLowerCase() === 'to be determined') return '后续待定';
+  if (
+    ['returning series', 'planned', 'in production', 'pilot'].includes(
+      show.status.toLowerCase(),
+    )
+  ) {
+    return '后续待定';
+  }
   return '下集未定';
 }
 
@@ -419,7 +451,7 @@ function showRow(entry, large) {
       stack(
         'row',
         [
-          text(show.name, {
+          text(entry.source.displayName || show.name || show.originalName, {
             font: { size: large ? 13 : 12, weight: 'semibold' },
             textColor: COLORS.primary,
             maxLines: 1,
@@ -541,7 +573,7 @@ function footer() {
   return stack(
     'row',
     [
-      text('Data: TVmaze', {
+      text('Data: TMDB', {
         font: { size: 8, weight: 'medium' },
         textColor: COLORS.tertiary,
         maxLines: 1,
@@ -574,7 +606,7 @@ function listWidget(entries, options) {
     padding: large ? 14 : 11,
     gap: large ? 6 : 5,
     refreshAfter: options.refreshAfter,
-    url: TVMAZE_URL,
+    url: TMDB_URL,
     children: [
       header(
         options.totalItems,
@@ -603,7 +635,7 @@ function stateWidget(kind, title, detail, family, refreshAfter, extra = '') {
     padding: large ? 18 : 15,
     gap: 7,
     refreshAfter,
-    url: TVMAZE_URL,
+    url: TMDB_URL,
     children: [
       spacer(),
       { type: 'image', src: `sf-symbol:${symbol}`, color, width: 28, height: 28 },
@@ -643,6 +675,8 @@ function refreshAfterInterval(refreshMs) {
 
 export default async function main(ctx) {
   const family = ctx.widgetFamily || 'systemMedium';
+  const language = String(ctx.env?.TMDB_LANGUAGE || DEFAULT_LANGUAGE).trim() || DEFAULT_LANGUAGE;
+  const token = String(ctx.env?.TMDB_ACCESS_TOKEN || '').trim();
   const refreshHours = positiveNumber(ctx.env?.REFRESH_HOURS, DEFAULT_REFRESH_HOURS);
   const refreshMs = refreshHours * HOUR;
   const timeoutSeconds = positiveNumber(
@@ -671,7 +705,7 @@ export default async function main(ctx) {
       String(error?.message || '无法读取 TRACKED_SHOWS'),
       family,
       fallbackRefreshAfter,
-      '[{"name":"剧集名称","id":"TVmaze ID"}]',
+      '[{"name":"剧集名称","id":"TMDB TV ID","displayName":"自定义名称"}]',
     );
   }
 
@@ -682,7 +716,7 @@ export default async function main(ctx) {
       '请在 TRACKED_SHOWS 中填写需要跟踪的剧集。',
       family,
       fallbackRefreshAfter,
-      '[{"name":"剧集名称","id":"TVmaze ID"}]',
+      '[{"name":"剧集名称","id":"TMDB TV ID","displayName":"自定义名称"}]',
     );
   }
 
@@ -700,10 +734,36 @@ export default async function main(ctx) {
     );
   }
 
+  if (!token) {
+    return stateWidget(
+      'error',
+      '未配置 TMDB Token',
+      '请在模块参数 TMDB_ACCESS_TOKEN 中填写 API Read Access Token。',
+      family,
+      fallbackRefreshAfter,
+    );
+  }
+
   const pageItems = trackedShows.slice((page - 1) * pageSize, page * pageSize);
   const entries = await Promise.all(
-    pageItems.map((source) => loadTrackedShow(ctx, source, refreshMs, timeoutSeconds)),
+    pageItems.map((source) =>
+      loadTrackedShow(ctx, source, language, token, refreshMs, timeoutSeconds),
+    ),
   );
+
+  if (
+    entries.length > 0 &&
+    entries.every((entry) => entry.type === 'error') &&
+    entries.some((entry) => entry.status === 401)
+  ) {
+    return stateWidget(
+      'error',
+      'TMDB Token 无效',
+      '请检查 TMDB_ACCESS_TOKEN 是否填写了完整的 API Read Access Token。',
+      family,
+      fallbackRefreshAfter,
+    );
+  }
 
   return listWidget(entries, {
     family,

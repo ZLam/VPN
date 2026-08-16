@@ -1,13 +1,21 @@
-name: TVmaze 剧集追踪 Widget
-description: 使用 TVmaze 跟踪剧集的最近已播集、下一集和播出时间，支持中号、大号、分页与 24 小时缓存。
+name: TMDB 剧集追踪 Widget
+description: 使用 TMDB 跟踪剧集的最近已播集、下一集和播出日期，支持自定义显示名称、中号、大号、分页与 24 小时缓存。
 author: ZLam
 homepage: https://github.com/ZLam/VPN
 icon: play.tv.fill
 
 env_schema:
+  TMDB_ACCESS_TOKEN:
+    name: TMDB Access Token
+    description: TMDB 账户 API 设置页面中的 API Read Access Token；仅保存在本机，请勿公开。
+    default_value: ''
+  TMDB_LANGUAGE:
+    name: TMDB 数据语言
+    description: TMDB 本地化语言，默认使用简体中文 zh-CN。
+    default_value: 'zh-CN'
   TRACKED_SHOWS:
     name: 跟踪剧集 JSON
-    description: '格式：[{"name":"剧集名称","id":"TVmaze ID"}]；id 留空时会按 name 搜索。'
+    description: '格式：[{"name":"搜索名称","id":"TMDB TV ID","displayName":"显示名称"}]；id 和 displayName 可留空。'
     default_value: '[]'
   PAGE:
     name: 显示页码
@@ -15,11 +23,11 @@ env_schema:
     default_value: '1'
   REFRESH_HOURS:
     name: 数据刷新间隔（小时）
-    description: TVmaze 数据缓存时长，默认每天刷新一次。
+    description: TMDB 数据缓存时长，默认每天刷新一次。
     default_value: '24'
   REQUEST_TIMEOUT_SECONDS:
     name: 请求超时（秒）
-    description: 单次 TVmaze 请求的最长等待时间。
+    description: 单次 TMDB 请求的最长等待时间。
     default_value: '10'
 
 scriptings:
@@ -32,6 +40,8 @@ widgets:
 - name: 剧集追踪
   script_name: episode-tracker
   env:
+    TMDB_ACCESS_TOKEN: ''
+    TMDB_LANGUAGE: 'zh-CN'
     TRACKED_SHOWS: '[]'
     PAGE: '1'
     REFRESH_HOURS: '24'

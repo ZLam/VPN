@@ -1,16 +1,17 @@
-# TVmaze 剧集追踪 Widget
+# TMDB 剧集追踪 Widget
 
-一个用于跟踪剧集播出进度的 Egern Widget。数据来自 TVmaze，显示官方剧名、最近已播集、下一集以及下一集播出日期。
+一个使用 TMDB 数据跟踪剧集播出进度的 Egern Widget，显示剧名、最近已播集及日期、下一集及日期。
 
 仅为中号和大号主屏幕 Widget 设计：
 
 - 中号：每页显示 3 部剧。
 - 大号：每页显示 7 部剧，并补充单集名称。
-- 超出一页时使用 `PAGE` 分页，不会在后台请求当前页之外的剧集。
+- 超出一页时使用 `PAGE` 分页，只请求当前页的剧集。
+- 成功数据缓存 24 小时，请求失败时显示最近一次缓存。
 
 ## 安装
 
-在 Egern 中打开“工具 → 模块 → +”，添加以下模块地址：
+在 Egern 中打开“工具 → 模块 → +”，添加：
 
 ```text
 https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/episode_tracker/episode-tracker.yaml
@@ -18,41 +19,55 @@ https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/episode_
 
 启用模块后，进入“分析 → Widget Gallery”，将“剧集追踪”以中号或大号添加到主屏幕。
 
-模块会在编辑页面自动显示以下可调参数：
+## 获取并配置 TMDB Token
 
-- 跟踪剧集 JSON
-- 显示页码
-- 数据刷新间隔（小时）
-- 请求超时（秒）
+1. 登录 [TMDB](https://www.themoviedb.org)。
+2. 进入账户设置中的 API 页面，申请免费的 Developer API。
+3. 申请通过后复制 `API Read Access Token`。
+4. 在 Egern 模块编辑页面将它填入 `TMDB_ACCESS_TOKEN`。
 
-如果模块是在加入 `env_schema` 之前安装的，请先刷新远程模块；仍未显示时删除后重新添加一次。
+Widget 使用 Bearer Token 请求 TMDB。Token 仅应保存在个人设备中，不要写入公开 YAML、GitHub、日志或截图。
+
+没有配置 Token 时，Widget 会显示配置提示；Token 无效时会显示单独的鉴权错误。
 
 ## 配置剧集
 
-编辑模块中的 `TRACKED_SHOWS`，内容必须是一份 JSON 数组：
+`TRACKED_SHOWS` 必须是一份 JSON 数组，字段结构保持不变，并新增可选的 `displayName`：
 
-```yaml
-TRACKED_SHOWS: >-
-  [{"name":"Severance","id":"44934"},{"name":"The Last of Us","id":""}]
+```json
+[
+  {"name":"Severance","id":"","displayName":"人生切割术"},
+  {"name":"Silo","id":"","displayName":""}
+]
 ```
-
-每一项支持：
 
 | 字段 | 必填条件 | 说明 |
 | --- | --- | --- |
-| `id` | `name` 为空时必填 | TVmaze Show ID；填写后直接查询该 ID。 |
-| `name` | `id` 为空时必填 | 仅用于搜索 TVmaze ID，建议使用 TVmaze 可识别的原始剧名。 |
+| `id` | `name` 为空时必填 | TMDB TV ID；填写后直接请求该剧。 |
+| `name` | `id` 为空时必填 | 没有 ID 时用于搜索 TMDB，支持原名和译名。 |
+| `displayName` | 可选 | Widget 显示名称；不参与搜索或缓存。 |
 
-Widget 显示的剧名始终来自 TVmaze 返回的 `show.name`。配置中的 `name` 不是显示别名；成功取得数据后不会用它覆盖官方剧名。
+剧名显示优先级：
 
-如果没有填写 ID，首次运行会搜索名称、选择名称完全匹配的结果；没有完全匹配时使用相关度最高的第一项。解析出的 ID 会长期缓存。存在同名剧集时，建议直接填写 TVmaze ID 以避免歧义。
+1. 非空 `displayName`
+2. TMDB 按 `TMDB_LANGUAGE` 返回的 `name`
+3. TMDB 的 `original_name`
+4. 请求失败且没有缓存时使用配置中的 `name`
 
-TVmaze ID 可以从剧集页面地址中取得。例如：
+修改 `displayName` 可以立即生效，不需要等待每日数据缓存刷新。
+
+### TMDB ID
+
+TMDB 电视剧页面地址中的 `/tv/` 后数字就是 TV ID：
 
 ```text
-https://www.tvmaze.com/shows/44934/severance
-                             ^^^^^
+https://www.themoviedb.org/tv/1399-game-of-thrones
+                                 ^^^^
 ```
+
+也可以把 `id` 留空，让 Widget 首次运行时根据 `name` 搜索并缓存 TMDB ID。同名或重拍剧集建议手动填写 ID。
+
+> 从旧版本迁移时，原有数据源的 ID 不能作为 TMDB ID 使用。更新模块前请清空全部旧 ID，让脚本按名称重新搜索，或手动替换为 TMDB TV ID。数字相同不代表同一部剧。
 
 ## 分页
 
@@ -64,71 +79,61 @@ PAGE: '1'
 
 - 中号第 1 页显示第 1–3 项，第 2 页显示第 4–6 项。
 - 大号第 1 页显示第 1–7 项，第 2 页显示第 8–14 项。
-- 标题右侧会显示当前页码和总页数，例如 `2/3`。
-- 若要同时展示多个页面，可以在模块中复制 `widgets` 条目并为它们设置不同的 `name` 和 `PAGE`；各页面仍会共用同一份逐剧缓存。
+- 标题右侧显示当前页和总页数，例如 `2/3`。
+- 可在模块中复制 `widgets` 条目并配置不同 `PAGE`，各页面共用逐剧缓存。
 
-示例：
+## 数据和状态规则
 
-```yaml
-widgets:
-- name: 剧集追踪 · 第 1 页
-  script_name: episode-tracker
-  env:
-    TRACKED_SHOWS: '[{"name":"Severance","id":""},{"name":"Silo","id":""},{"name":"The Last of Us","id":""},{"name":"Fallout","id":""}]'
-    PAGE: '1'
-    REFRESH_HOURS: '24'
-    REQUEST_TIMEOUT_SECONDS: '10'
-- name: 剧集追踪 · 第 2 页
-  script_name: episode-tracker
-  env:
-    TRACKED_SHOWS: '[{"name":"Severance","id":""},{"name":"Silo","id":""},{"name":"The Last of Us","id":""},{"name":"Fallout","id":""}]'
-    PAGE: '2'
-    REFRESH_HOURS: '24'
-    REQUEST_TIMEOUT_SECONDS: '10'
-```
-
-两个条目必须使用同一份 `TRACKED_SHOWS`。第二页需要配置超过当前尺寸单页容量的剧集，否则会显示页码范围提示。
-
-## 状态规则
-
-- 最近已播集使用 TVmaze 的 `previousepisode`。
-- 最近已播集在集数后显示播出日期；大号布局同时保留单集名称。
-- 下一集使用 TVmaze 的 `nextepisode`，季状态使用同次请求嵌入的 `seasons`。
-- 标准集数显示为 `S02E08`；缺少标准季/集编号时显示为“特别篇”。
-- 下一集有 `airstamp` 时转换为设备本地日期，仅显示“今天”“明天”或具体月日，不显示播出时刻。
-- 下一集存在但日期未知时显示“待公布”。
-- 全剧状态为 `Ended` 或 `ended` 日期已到时显示“全剧已完结”。
-- 最新集所属季的 `endDate` 已到，或最新集编号达到 `episodeOrder` 时显示“本季已播完”。
-- 状态为 `To Be Determined` 且没有更明确的季完结信息时显示“后续待定”。
+- 剧集详情来自 `GET /3/tv/{id}`，名称搜索来自 `GET /3/search/tv`。
+- 最近已播集使用 `last_episode_to_air`，显示 `S02E08 · 8月15日`。
+- 下一集使用 `next_episode_to_air`，显示 `S02E09 · 8月22日`。
+- 大号布局同时显示 TMDB 返回的单集名称。
+- 日期只显示“今天”“明天”或具体月日，不显示播出时刻。
+- 日期缺失时，已播集显示“日期未知”，下一集显示“待公布”。
+- `status` 为 `Ended` 或 `Canceled` 且没有下一集时显示“全剧已完结”。
+- 最新集编号达到当前季 `episode_count` 时显示“本季已播完”。
+- `Returning Series`、`Planned`、`In Production` 或 `Pilot` 没有下一集时显示“后续待定”。
 - 其他没有下一集资料的状态显示“下集未定”。
+
+TMDB 没有季结束日期；“本季已播完”是根据当前已知的 `episode_count` 推断，数据不完整时可能暂时显示“后续待定”或产生误判。
 
 ## 缓存和异常处理
 
-- 每一部剧单独缓存，成功数据 24 小时内不会再次请求。
-- 添加一部新剧只会请求新增条目，不会让其他有效缓存失效。
-- 请求失败时优先显示最近一次成功结果，并在对应行标记“缓存”。
-- 单部剧获取失败只影响该行。
-- 空配置不会发起任何网络请求。
-- `refreshAfter` 是建议给 iOS 的最早刷新时间，实际刷新可能晚于 24 小时。
-
-TVmaze 公共 API 有调用频率限制。Widget 每页最多处理 7 部剧，并通过每日缓存减少请求。数据依据 TVmaze 的 CC BY-SA 条款使用，Widget 保留 `Data: TVmaze` 署名以及 TVmaze 链接。
+- 每部剧按 TMDB ID 和数据语言单独缓存。
+- 成功数据在 `REFRESH_HOURS` 内不重复请求，默认 24 小时。
+- 名称到 TMDB ID 的解析结果单独缓存。
+- 修改 `displayName` 不会让数据缓存失效。
+- 添加新剧只请求新增条目。
+- 单部剧获取失败不影响其他剧集。
+- 请求失败时优先显示旧缓存并标记“缓存”。
+- 空配置和无效页码不会发送网络请求。
+- `refreshAfter` 是提交给 iOS 的最早刷新时间，实际刷新可能稍晚。
+- 缓存使用全新的 TMDB 命名空间，不会读取旧版本的数据缓存。
 
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
+| `TMDB_ACCESS_TOKEN` | 空 | 必填的 API Read Access Token。 |
+| `TMDB_LANGUAGE` | `zh-CN` | TMDB 返回内容的本地化语言。 |
 | `TRACKED_SHOWS` | `[]` | 跟踪剧集 JSON。 |
 | `PAGE` | `1` | 当前页码，从 1 开始。 |
 | `REFRESH_HOURS` | `24` | 成功数据缓存和刷新间隔。 |
-| `REQUEST_TIMEOUT_SECONDS` | `10` | 单次 TVmaze 请求超时。 |
+| `REQUEST_TIMEOUT_SECONDS` | `10` | 单次 TMDB 请求超时。 |
 
-## 文件
+## TMDB 署名
+
+本 Widget 底部保留 `Data: TMDB` 并链接到 TMDB。
+
+This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+TMDB 数据和品牌使用应遵守 [TMDB API 条款与署名要求](https://developer.themoviedb.org/docs/faq)。
+
+## 文件和测试
 
 - `episode-tracker.js`：Egern Generic Widget 脚本。
 - `episode-tracker.yaml`：可直接安装的 Egern 模块。
 - `episode-tracker.test.mjs`：不依赖第三方包的 Node.js 行为测试。
-
-运行测试：
 
 ```shell
 node --test egern/widget/episode_tracker/episode-tracker.test.mjs
