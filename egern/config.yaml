@@ -359,6 +359,8 @@ modules:
   enabled: true
 - url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/douban_ranking/douban-ranking.yaml
   enabled: true
+- url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/episode_tracker/episode-tracker.yaml
+  enabled: true
 - url: https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/test/link-test.yaml
   enabled: true
 # - url: https://raw.githubusercontent.com/QingRex/LoonKissSurge/refs/heads/main/Surge/Beta/广告平台拦截器.beta.sgmodule
