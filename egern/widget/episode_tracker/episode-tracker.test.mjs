@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const source = await readFile(new URL('./episode-tracker.js', import.meta.url), 'utf8');
+const manifest = await readFile(new URL('./episode-tracker.yaml', import.meta.url), 'utf8');
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
 const { default: renderWidget } = await import(moduleUrl);
 
@@ -126,6 +127,18 @@ function createContext({
     store,
   };
 }
+
+test('declares editable module parameters in env_schema', () => {
+  assert.match(manifest, /^env_schema:/m);
+  for (const key of [
+    'TRACKED_SHOWS',
+    'PAGE',
+    'REFRESH_HOURS',
+    'REQUEST_TIMEOUT_SECONDS',
+  ]) {
+    assert.match(manifest, new RegExp(`^  ${key}:`, 'm'));
+  }
+});
 
 test('renders an empty state without making a request', async () => {
   const { ctx, calls } = createContext({ trackedShows: [] });

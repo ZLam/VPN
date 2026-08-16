@@ -18,6 +18,15 @@ https://raw.githubusercontent.com/ZLam/VPN/refs/heads/main/egern/widget/episode_
 
 启用模块后，进入“分析 → Widget Gallery”，将“剧集追踪”以中号或大号添加到主屏幕。
 
+模块会在编辑页面自动显示以下可调参数：
+
+- 跟踪剧集 JSON
+- 显示页码
+- 数据刷新间隔（小时）
+- 请求超时（秒）
+
+如果模块是在加入 `env_schema` 之前安装的，请先刷新远程模块；仍未显示时删除后重新添加一次。
+
 ## 配置剧集
 
 编辑模块中的 `TRACKED_SHOWS`，内容必须是一份 JSON 数组：

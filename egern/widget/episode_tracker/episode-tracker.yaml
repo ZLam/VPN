@@ -4,6 +4,24 @@ author: ZLam
 homepage: https://github.com/ZLam/VPN
 icon: play.tv.fill
 
+env_schema:
+  TRACKED_SHOWS:
+    name: 跟踪剧集 JSON
+    description: '格式：[{"name":"剧集名称","id":"TVmaze ID"}]；id 留空时会按 name 搜索。'
+    default_value: '[]'
+  PAGE:
+    name: 显示页码
+    description: 中号每页 3 部，大号每页 7 部；页码从 1 开始。
+    default_value: '1'
+  REFRESH_HOURS:
+    name: 数据刷新间隔（小时）
+    description: TVmaze 数据缓存时长，默认每天刷新一次。
+    default_value: '24'
+  REQUEST_TIMEOUT_SECONDS:
+    name: 请求超时（秒）
+    description: 单次 TVmaze 请求的最长等待时间。
+    default_value: '10'
+
 scriptings:
 - generic:
     name: episode-tracker
