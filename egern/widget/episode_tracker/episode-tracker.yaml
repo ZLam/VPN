@@ -1,5 +1,5 @@
 name: TMDB 剧集追踪 Widget
-description: 使用 TMDB 跟踪剧集的最近已播集、下一集和播出日期，支持自定义显示名称、中号、大号、分页与 24 小时缓存。
+description: 使用 TMDB 跟踪剧集海报、最近已播集、下一集和播出日期，支持自定义显示名称、中号、大号、分页与 24 小时缓存。
 author: ZLam
 homepage: https://github.com/ZLam/VPN
 icon: play.tv.fill

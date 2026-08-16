@@ -26,6 +26,7 @@ function tmdbPayload(id, name = `TMDB Official ${id}`, overrides = {}) {
     in_production: true,
     first_air_date: '2024-01-01',
     last_air_date: '2026-08-15',
+    poster_path: `/poster-${id}.jpg`,
     last_episode_to_air: {
       id: Number(id) * 100 + 10,
       name: 'Latest Chapter',
@@ -65,6 +66,7 @@ function createContext({
   const controls = {
     failedShowIds: new Set(),
     failedSearches: new Set(),
+    failedPosterPaths: new Set(),
     statusByShowId: new Map(),
     invalidToken: false,
   };
@@ -101,6 +103,24 @@ function createContext({
           status: 200,
           async json() {
             return { page: 1, results, total_pages: 1, total_results: results.length };
+          },
+        };
+      }
+
+      if (url.startsWith('https://image.tmdb.org/t/p/w92/')) {
+        const posterPath = new URL(url).pathname.replace('/t/p/w92', '');
+        if (controls.failedPosterPaths.has(posterPath)) {
+          return { status: 503, headers: {} };
+        }
+        return {
+          status: 200,
+          headers: {
+            get(name) {
+              return name.toLowerCase() === 'content-type' ? 'image/jpeg' : null;
+            },
+          },
+          async arrayBuffer() {
+            return new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer;
           },
         };
       }
@@ -344,7 +364,7 @@ test('medium pagination requests only three TMDB shows from the selected page', 
   assert.doesNotMatch(allText(widget), /TMDB Official 1/);
 });
 
-test('large widgets show five entries with latest and next episodes on separate lines', async () => {
+test('large widgets show five entries with posters and episode details', async () => {
   const setup = createContext({
     trackedShows: [1, 2, 3, 4, 5, 6, 7, 8].map((id) => ({ name: '', id: String(id) })),
     family: 'systemLarge',
@@ -352,20 +372,59 @@ test('large widgets show five entries with latest and next episodes on separate 
   const widget = await renderWidget(setup.ctx);
 
   assert.equal(setup.calls.filter((call) => call.url.includes('/3/tv/')).length, 5);
+  assert.equal(
+    setup.calls.filter((call) => call.url.startsWith('https://image.tmdb.org/')).length,
+    5,
+  );
   assert.match(allText(widget), /Latest Chapter/);
   assert.match(allText(widget), /Next Chapter/);
   assert.match(allText(widget), /1\/2/);
 
   const firstRow = widget.children[1].children[0];
-  assert.equal(firstRow.direction, 'column');
-  assert.equal(firstRow.children.length, 3);
-  assert.equal(firstRow.alignItems, 'start');
+  assert.equal(firstRow.direction, 'row');
+  assert.equal(firstRow.children.length, 2);
+  assert.equal(firstRow.alignItems, 'center');
   assert.equal(firstRow.height, 51);
-  assert.deepEqual(firstRow.padding, [1, 8, 3, 8]);
-  assert.match(allText(firstRow.children[1]), /^已播 /);
-  assert.match(allText(firstRow.children[2]), /^下集 /);
-  assert.equal(firstRow.children[1].textAlign, 'left');
-  assert.equal(firstRow.children[2].textAlign, 'left');
+  assert.deepEqual(firstRow.padding, [2, 8, 2, 5]);
+
+  const poster = firstRow.children[0];
+  assert.equal(poster.type, 'image');
+  assert.match(poster.src, /^data:image\/jpeg;base64,/);
+  assert.equal(poster.width, 30);
+  assert.equal(poster.height, 45);
+  assert.equal(poster.resizeMode, 'cover');
+
+  const details = firstRow.children[1];
+  assert.equal(details.direction, 'column');
+  assert.equal(details.alignItems, 'start');
+  assert.equal(details.height, 45);
+  assert.match(allText(details.children[1]), /^已播 /);
+  assert.match(allText(details.children[2]), /^下集 /);
+  assert.equal(details.children[1].textAlign, 'left');
+  assert.equal(details.children[2].textAlign, 'left');
+});
+
+test('large widgets cache posters and fall back to a placeholder when loading fails', async () => {
+  const cachedSetup = createContext({ family: 'systemLarge' });
+  const firstWidget = await renderWidget(cachedSetup.ctx);
+  const firstPoster = firstWidget.children[1].children[0].children[0];
+  assert.match(firstPoster.src, /^data:image\/jpeg;base64,/);
+  assert.equal(cachedSetup.calls.length, 2);
+
+  await renderWidget(cachedSetup.ctx);
+  assert.equal(cachedSetup.calls.length, 2, 'fresh show and poster caches should avoid requests');
+  assert.ok(
+    [...cachedSetup.store.keys()].some((key) =>
+      key.startsWith('episode-tracker:tmdb:poster:v1:'),
+    ),
+  );
+
+  const failedSetup = createContext({ family: 'systemLarge' });
+  failedSetup.controls.failedPosterPaths.add('/poster-1.jpg');
+  const failedWidget = await renderWidget(failedSetup.ctx);
+  const fallbackPoster = failedWidget.children[1].children[0].children[0];
+  assert.equal(fallbackPoster.src, 'sf-symbol:photo.fill');
+  assert.match(allText(failedWidget), /TMDB Official 1/);
 });
 
 test('distinguishes whole-show, season-complete, and scheduling states', async () => {

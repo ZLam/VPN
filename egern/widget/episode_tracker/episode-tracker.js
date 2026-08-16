@@ -1,10 +1,12 @@
 const API_ROOT = 'https://api.themoviedb.org/3';
 const TMDB_URL = 'https://www.themoviedb.org';
+const POSTER_ROOT = 'https://image.tmdb.org/t/p/w92';
 const DEFAULT_LANGUAGE = 'zh-CN';
 const DEFAULT_REFRESH_HOURS = 24;
 const DEFAULT_TIMEOUT_SECONDS = 10;
 const MEDIUM_PAGE_SIZE = 3;
 const LARGE_PAGE_SIZE = 5;
+const MAX_POSTER_BYTES = 256 * 1024;
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
@@ -45,6 +47,11 @@ function normalizedName(value) {
 function normalizedId(value) {
   const id = String(value ?? '').trim();
   return /^[1-9]\d*$/.test(id) ? id : '';
+}
+
+function normalizedPosterPath(value) {
+  const path = String(value || '').trim();
+  return path.startsWith('/') && !path.includes('..') ? path : '';
 }
 
 function parseTrackedShows(rawValue) {
@@ -116,6 +123,43 @@ function cacheToken(value) {
   return (hash >>> 0).toString(36);
 }
 
+function bytesToBase64(bytes) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let encoded = '';
+
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index];
+    const hasSecond = index + 1 < bytes.length;
+    const hasThird = index + 2 < bytes.length;
+    const second = hasSecond ? bytes[index + 1] : 0;
+    const third = hasThird ? bytes[index + 2] : 0;
+
+    encoded += alphabet[first >> 2];
+    encoded += alphabet[((first & 3) << 4) | (second >> 4)];
+    encoded += hasSecond ? alphabet[((second & 15) << 2) | (third >> 6)] : '=';
+    encoded += hasThird ? alphabet[third & 63] : '=';
+  }
+
+  return encoded;
+}
+
+function responseHeader(response, name) {
+  if (typeof response?.headers?.get === 'function') {
+    return response.headers.get(name) || '';
+  }
+  return String(response?.headers?.[name] || response?.headers?.[name.toLowerCase()] || '');
+}
+
+function posterMimeType(response) {
+  const contentType = responseHeader(response, 'content-type')
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType)
+    ? contentType
+    : '';
+}
+
 function tmdbError(status) {
   if (status === 401) return new TmdbRequestError('TMDB Token 无效', status);
   if (status === 404) return new TmdbRequestError('找不到对应的 TMDB 剧集', status);
@@ -139,6 +183,56 @@ async function fetchJSON(ctx, url, token, timeoutSeconds) {
   }
 
   return response.json();
+}
+
+async function fetchPoster(ctx, posterPath, timeoutSeconds) {
+  const response = await ctx.http.get(`${POSTER_ROOT}${posterPath}`, {
+    headers: {
+      Accept: 'image/webp,image/png,image/jpeg',
+      'User-Agent': 'Egern-Episode-Tracker/1.0',
+    },
+    timeout: timeoutSeconds * 1000,
+    credentials: 'omit',
+  });
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`TMDB 海报请求失败（HTTP ${response.status}）`);
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > MAX_POSTER_BYTES) {
+    throw new Error('TMDB 海报数据无效');
+  }
+
+  const mimeType = posterMimeType(response);
+  if (!mimeType) throw new Error('TMDB 海报格式不受支持');
+  return `data:${mimeType};base64,${bytesToBase64(bytes)}`;
+}
+
+async function loadPoster(ctx, show, timeoutSeconds) {
+  if (!show.posterPath) return '';
+
+  const cacheKey = `episode-tracker:tmdb:poster:v1:${show.id}`;
+  const cached = safeGetJSON(ctx.storage, cacheKey);
+  if (
+    cached?.path === show.posterPath &&
+    typeof cached?.src === 'string' &&
+    cached.src.startsWith('data:image/')
+  ) {
+    return cached.src;
+  }
+
+  try {
+    const src = await fetchPoster(ctx, show.posterPath, timeoutSeconds);
+    safeSetJSON(ctx.storage, cacheKey, {
+      path: show.posterPath,
+      src,
+      fetchedAt: Date.now(),
+    });
+    return src;
+  } catch {
+    return '';
+  }
 }
 
 function chooseSearchResult(results, query) {
@@ -227,6 +321,7 @@ function normalizeShow(payload, expectedId) {
     status: String(payload.status || ''),
     inProduction: payload.in_production === true,
     premiered: String(payload.first_air_date || ''),
+    posterPath: normalizedPosterPath(payload.poster_path),
     url: `${TMDB_URL}/tv/${id}`,
     latest: normalizeEpisode(payload.last_episode_to_air),
     next: normalizeEpisode(payload.next_episode_to_air),
@@ -246,6 +341,10 @@ function isCachedShow(value, id) {
   );
 }
 
+function hasPosterMetadata(value) {
+  return typeof value?.show?.posterPath === 'string';
+}
+
 async function fetchShow(ctx, id, language, token, timeoutSeconds) {
   const url = `${API_ROOT}/tv/${encodeURIComponent(id)}?language=${encodeURIComponent(language)}`;
   return normalizeShow(await fetchJSON(ctx, url, token, timeoutSeconds), id);
@@ -257,7 +356,11 @@ async function loadShow(ctx, id, language, token, refreshMs, timeoutSeconds) {
   const cached = safeGetJSON(ctx.storage, cacheKey);
   const now = Date.now();
 
-  if (isCachedShow(cached, id) && now - Number(cached.fetchedAt) < refreshMs) {
+  if (
+    isCachedShow(cached, id) &&
+    hasPosterMetadata(cached) &&
+    now - Number(cached.fetchedAt) < refreshMs
+  ) {
     return {
       show: cached.show,
       cacheState: 'fresh',
@@ -310,6 +413,18 @@ async function loadTrackedShow(ctx, source, language, token, refreshMs, timeoutS
       nextRefreshAt: Date.now() + refreshMs,
     };
   }
+}
+
+async function loadEntryPosters(ctx, entries, timeoutSeconds) {
+  return Promise.all(
+    entries.map(async (entry) => {
+      if (entry.type !== 'show') return entry;
+      return {
+        ...entry,
+        posterSrc: await loadPoster(ctx, entry.show, timeoutSeconds),
+      };
+    }),
+  );
 }
 
 function text(value, options = {}) {
@@ -433,6 +548,18 @@ function episodeWithName(prefix, episode, fallback) {
   return `${prefix} ${episodeCode(episode)}${name} · ${date}`;
 }
 
+function posterImage(src = '') {
+  return {
+    type: 'image',
+    src: src || 'sf-symbol:photo.fill',
+    ...(src ? {} : { color: COLORS.tertiary }),
+    width: 30,
+    height: 45,
+    resizeMode: 'cover',
+    borderRadius: 5,
+  };
+}
+
 function showRow(entry, large) {
   if (entry.type === 'error') return errorRow(entry, large);
 
@@ -462,45 +589,67 @@ function showRow(entry, large) {
     ...(large ? {} : { flex: 1 }),
   });
 
+  const titleRow = stack(
+    'row',
+    [
+      text(entry.source.displayName || show.name || show.originalName, {
+        font: { size: large ? 13 : 12, weight: 'semibold' },
+        textColor: COLORS.primary,
+        textAlign: large ? 'left' : undefined,
+        maxLines: 1,
+        minScale: 0.72,
+        flex: 1,
+      }),
+      ...(entry.cacheState === 'stale'
+        ? [
+            text('缓存', {
+              font: { size: 8, weight: 'semibold' },
+              textColor: COLORS.warning,
+              maxLines: 1,
+            }),
+          ]
+        : []),
+    ],
+    { gap: 4, alignItems: 'center' },
+  );
+
+  if (large) {
+    return stack(
+      'row',
+      [
+        posterImage(entry.posterSrc),
+        stack('column', [titleRow, latestText, nextText], {
+          gap: 2,
+          height: 45,
+          alignItems: 'start',
+          flex: 1,
+        }),
+      ],
+      {
+        gap: 7,
+        height: 51,
+        padding: [2, 8, 2, 5],
+        alignItems: 'center',
+        backgroundColor: COLORS.card,
+        borderRadius: 8,
+      },
+    );
+  }
+
   return stack(
     'column',
     [
-      stack(
-        'row',
-        [
-          text(entry.source.displayName || show.name || show.originalName, {
-            font: { size: large ? 13 : 12, weight: 'semibold' },
-            textColor: COLORS.primary,
-            maxLines: 1,
-            minScale: 0.72,
-            flex: 1,
-          }),
-          ...(entry.cacheState === 'stale'
-            ? [
-                text('缓存', {
-                  font: { size: 8, weight: 'semibold' },
-                  textColor: COLORS.warning,
-                  maxLines: 1,
-                }),
-              ]
-            : []),
-        ],
-        { gap: 4, alignItems: 'center' },
-      ),
-      ...(large
-        ? [latestText, nextText]
-        : [
-            stack('row', [latestText, nextText], {
-              gap: 5,
-              alignItems: 'center',
-            }),
-          ]),
+      titleRow,
+      stack('row', [latestText, nextText], {
+        gap: 5,
+        alignItems: 'center',
+      }),
     ],
     {
       gap: 2,
-      height: large ? 51 : 31,
-      padding: large ? [1, 8, 3, 8] : [0, 7],
-      alignItems: large ? 'start' : 'center',
+      height: 31,
+      padding: [0, 7],
+      alignItems: 'center',
       backgroundColor: COLORS.card,
       borderRadius: 8,
     },
@@ -508,27 +657,52 @@ function showRow(entry, large) {
 }
 
 function errorRow(entry, large) {
+  const content = [
+    text(sourceLabel(entry.source), {
+      font: { size: large ? 13 : 12, weight: 'semibold' },
+      textColor: COLORS.primary,
+      maxLines: 1,
+      minScale: 0.72,
+    }),
+    text(`获取失败 · ${entry.message}`, {
+      font: { size: large ? 10 : 9, weight: 'regular' },
+      textColor: COLORS.error,
+      maxLines: 1,
+      minScale: 0.62,
+    }),
+  ];
+
+  if (large) {
+    return stack(
+      'row',
+      [
+        posterImage(),
+        stack('column', content, {
+          gap: 2,
+          height: 45,
+          alignItems: 'start',
+          flex: 1,
+        }),
+      ],
+      {
+        gap: 7,
+        height: 51,
+        padding: [2, 8, 2, 5],
+        alignItems: 'center',
+        backgroundColor: COLORS.card,
+        borderRadius: 8,
+      },
+    );
+  }
+
   return stack(
     'column',
-    [
-      text(sourceLabel(entry.source), {
-        font: { size: large ? 13 : 12, weight: 'semibold' },
-        textColor: COLORS.primary,
-        maxLines: 1,
-        minScale: 0.72,
-      }),
-      text(`获取失败 · ${entry.message}`, {
-        font: { size: large ? 10 : 9, weight: 'regular' },
-        textColor: COLORS.error,
-        maxLines: 1,
-        minScale: 0.62,
-      }),
-    ],
+    content,
     {
       gap: 2,
-      height: large ? 51 : 31,
-      padding: large ? [1, 8, 3, 8] : [0, 7],
-      alignItems: large ? 'start' : 'center',
+      height: 31,
+      padding: [0, 7],
+      alignItems: 'center',
       backgroundColor: COLORS.card,
       borderRadius: 8,
     },
@@ -751,7 +925,7 @@ export default async function main(ctx) {
   }
 
   const pageItems = trackedShows.slice((page - 1) * pageSize, page * pageSize);
-  const entries = await Promise.all(
+  let entries = await Promise.all(
     pageItems.map((source) =>
       loadTrackedShow(ctx, source, language, token, refreshMs, timeoutSeconds),
     ),
@@ -769,6 +943,10 @@ export default async function main(ctx) {
       family,
       fallbackRefreshAfter,
     );
+  }
+
+  if (family === 'systemLarge') {
+    entries = await loadEntryPosters(ctx, entries, timeoutSeconds);
   }
 
   return listWidget(entries, {
