@@ -4,7 +4,7 @@ const DEFAULT_LANGUAGE = 'zh-CN';
 const DEFAULT_REFRESH_HOURS = 24;
 const DEFAULT_TIMEOUT_SECONDS = 10;
 const MEDIUM_PAGE_SIZE = 3;
-const LARGE_PAGE_SIZE = 7;
+const LARGE_PAGE_SIZE = 5;
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 
@@ -445,6 +445,22 @@ function showRow(entry, large) {
       ? `下集 ${episodeCode(show.next)}${show.next.name ? ` · ${show.next.name}` : ''} · ${formatAirDate(show.next)}`
       : nextStatus(show);
 
+  const latestText = text(latest, {
+    font: { size: large ? 10 : 9, weight: 'regular' },
+    textColor: COLORS.secondary,
+    maxLines: 1,
+    minScale: 0.65,
+    ...(large ? {} : { flex: 1 }),
+  });
+  const nextText = text(next, {
+    font: { size: large ? 10 : 9, weight: 'medium' },
+    textColor: show.next ? COLORS.accent : COLORS.tertiary,
+    ...(large ? {} : { textAlign: 'right' }),
+    maxLines: 1,
+    minScale: 0.62,
+    ...(large ? {} : { flex: 1 }),
+  });
+
   return stack(
     'column',
     [
@@ -470,31 +486,18 @@ function showRow(entry, large) {
         ],
         { gap: 4, alignItems: 'center' },
       ),
-      stack(
-        'row',
-        [
-          text(latest, {
-            font: { size: large ? 10 : 9, weight: 'regular' },
-            textColor: COLORS.secondary,
-            maxLines: 1,
-            minScale: 0.65,
-            flex: 1,
-          }),
-          text(next, {
-            font: { size: large ? 10 : 9, weight: 'medium' },
-            textColor: show.next ? COLORS.accent : COLORS.tertiary,
-            textAlign: 'right',
-            maxLines: 1,
-            minScale: 0.62,
-            flex: 1,
-          }),
-        ],
-        { gap: large ? 8 : 5, alignItems: 'center' },
-      ),
+      ...(large
+        ? [latestText, nextText]
+        : [
+            stack('row', [latestText, nextText], {
+              gap: 5,
+              alignItems: 'center',
+            }),
+          ]),
     ],
     {
       gap: 2,
-      height: large ? 34 : 31,
+      height: large ? 49 : 31,
       padding: large ? [0, 8] : [0, 7],
       backgroundColor: COLORS.card,
       borderRadius: 8,
@@ -521,7 +524,7 @@ function errorRow(entry, large) {
     ],
     {
       gap: 2,
-      height: large ? 34 : 31,
+      height: large ? 49 : 31,
       padding: large ? [0, 8] : [0, 7],
       backgroundColor: COLORS.card,
       borderRadius: 8,

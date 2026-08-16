@@ -19,7 +19,7 @@ env_schema:
     default_value: '[]'
   PAGE:
     name: 显示页码
-    description: 中号每页 3 部，大号每页 7 部；页码从 1 开始。
+    description: 中号每页 3 部，大号每页 5 部；页码从 1 开始。
     default_value: '1'
   REFRESH_HOURS:
     name: 数据刷新间隔（小时）

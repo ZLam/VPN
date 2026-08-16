@@ -344,17 +344,23 @@ test('medium pagination requests only three TMDB shows from the selected page', 
   assert.doesNotMatch(allText(widget), /TMDB Official 1/);
 });
 
-test('large widgets show seven entries and include TMDB episode names', async () => {
+test('large widgets show five entries with latest and next episodes on separate lines', async () => {
   const setup = createContext({
     trackedShows: [1, 2, 3, 4, 5, 6, 7, 8].map((id) => ({ name: '', id: String(id) })),
     family: 'systemLarge',
   });
   const widget = await renderWidget(setup.ctx);
 
-  assert.equal(setup.calls.filter((call) => call.url.includes('/3/tv/')).length, 7);
+  assert.equal(setup.calls.filter((call) => call.url.includes('/3/tv/')).length, 5);
   assert.match(allText(widget), /Latest Chapter/);
   assert.match(allText(widget), /Next Chapter/);
   assert.match(allText(widget), /1\/2/);
+
+  const firstRow = widget.children[1].children[0];
+  assert.equal(firstRow.direction, 'column');
+  assert.equal(firstRow.children.length, 3);
+  assert.match(allText(firstRow.children[1]), /^已播 /);
+  assert.match(allText(firstRow.children[2]), /^下集 /);
 });
 
 test('distinguishes whole-show, season-complete, and scheduling states', async () => {
