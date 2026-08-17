@@ -749,7 +749,15 @@ function header(totalItems, page, totalPages, hasErrors) {
   );
 }
 
-function footer() {
+function formatRefreshTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '下次刷新 待定';
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `下次刷新 ${date.getMonth() + 1}月${date.getDate()}日 ${hours}:${minutes}`;
+}
+
+function footer(refreshAfter) {
   return stack(
     'row',
     [
@@ -759,10 +767,11 @@ function footer() {
         maxLines: 1,
       }),
       spacer(),
-      text('每日更新', {
+      text(formatRefreshTime(refreshAfter), {
         font: { size: 8, weight: 'regular' },
         textColor: COLORS.tertiary,
         maxLines: 1,
+        minScale: 0.72,
       }),
     ],
     { height: 10, alignItems: 'center' },
@@ -800,7 +809,7 @@ function listWidget(entries, options) {
         { gap: large ? 4 : 3, alignItems: 'start' },
       ),
       spacer(),
-      footer(),
+      footer(options.refreshAfter),
     ],
   };
 }
@@ -844,7 +853,7 @@ function stateWidget(kind, title, detail, family, refreshAfter, extra = '') {
           ]
         : []),
       spacer(),
-      footer(),
+      footer(refreshAfter),
     ],
   };
 }

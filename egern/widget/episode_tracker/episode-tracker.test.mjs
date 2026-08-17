@@ -10,6 +10,13 @@ const { default: renderWidget } = await import(moduleUrl);
 
 const HOUR = 60 * 60 * 1000;
 
+function refreshLabel(value) {
+  const date = new Date(value);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `下次刷新 ${date.getMonth() + 1}月${date.getDate()}日 ${hours}:${minutes}`;
+}
+
 function allText(node) {
   if (!node || typeof node !== 'object') return '';
   const own = typeof node.text === 'string' ? node.text : '';
@@ -533,6 +540,7 @@ test('invalid pages and unsupported sizes do not make requests', async () => {
   });
   const pageWidget = await renderWidget(invalidPage.ctx);
   assert.match(allText(pageWidget), /这一页没有剧集/);
+  assert.ok(allText(pageWidget).includes(refreshLabel(pageWidget.refreshAfter)));
   assert.equal(invalidPage.calls.length, 0);
 
   const unsupported = createContext({ family: 'systemSmall' });
@@ -551,6 +559,7 @@ test('uses a daily refresh date and TMDB attribution link', async () => {
   assert.ok(refreshAt <= Date.now() + 24.1 * HOUR);
   assert.equal(widget.url, 'https://www.themoviedb.org');
   assert.match(allText(widget), /Data: TMDB/);
+  assert.ok(allText(widget).includes(refreshLabel(widget.refreshAfter)));
 });
 
 test('contains no TVmaze endpoint, branding, or legacy cache namespace', () => {
